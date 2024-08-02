@@ -10,9 +10,9 @@
     <string name="text_select_all">SelectAll</string>
     <string name="text_deselect_all">DeSelectAll</string>
 
-    <string name="message_selected_exceed">Select up to %d photos or videos</string>
+    <string name="message_selected_exceed">Select up to %d photos</string>
 
-    <string name="text_select_tip">Select both photos and videos</string>
+    <string name="text_select_tip">Select both photos</string>
     <string name="text_done">Done</string>
     <string name="text_asset_select">Select</string>
     <string name="text_select_button">Next(%1$d/%2$d)</string>

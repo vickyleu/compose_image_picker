@@ -1,6 +1,7 @@
 package com.huhx.picker
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -17,6 +18,7 @@ import com.huhx.picker.view.AssetDisplayScreen
 import com.huhx.picker.view.AssetPreviewScreen
 import com.huhx.picker.view.AssetSelectorScreen
 import com.huhx.picker.viewmodel.AssetViewModel
+import kotlinx.datetime.LocalDateTime
 
 @Composable
 internal fun AssetPickerRoute(
@@ -63,28 +65,30 @@ internal fun AssetPickerRoute(
             val arguments = it.arguments!!
             val requestType = arguments.getString("requestType")
             val assets = viewModel.getGroupedAssets(RequestType.valueOf(requestType!!))
-
-            var dateString by remember {
-                mutableStateOf(arguments.getString("dateString"))
-            }
-
             var index by remember {
                 mutableIntStateOf(arguments.getInt("index"))
             }
-
-            var assetList by remember {
-                mutableStateOf(assets.getOrDefault(dateString, listOf()))
+            val flattenedList = remember {
+                assets.toList().sortedByDescending {
+                    LocalDateTime.parse(it.first)
+                }.flatMap { (time, list) ->
+                    list.map {
+                        time to it
+                    }.sortedByDescending {
+                        LocalDateTime.parse(it.first)
+                    }
+                }
             }
-
             AssetPreviewScreen(
                 index = index,
-                assets = assetList,
+                assets = flattenedList,
                 selectedList = viewModel.selectedList,
                 navigateUp = { navController.navigateUp() },
                 onSelectChanged = { assetInfo ->
-                    dateString = assetInfo.dateString
-                    assetList = assets.getOrDefault(dateString, listOf())
-                    index = assetList.indexOf(assetInfo)
+                    viewModel.selectedList.sortBy { asset ->
+                        flattenedList.indexOfFirst { it.second == asset }
+                    }
+                    index = viewModel.selectedList.indexOf(assetInfo)
                 }
             )
         }
@@ -93,7 +97,8 @@ internal fun AssetPickerRoute(
 
 object AssetRoute {
     const val display = "asset_display"
-    const val preview = "asset_preview?index={index}&dateString={dateString}&requestType={requestType}"
+    const val preview =
+        "asset_preview?index={index}&dateString={dateString}&requestType={requestType}"
     const val selector = "asset_selector?directory={directory}"
 
     fun preview(index: Int, dateString: String, requestType: RequestType): String {

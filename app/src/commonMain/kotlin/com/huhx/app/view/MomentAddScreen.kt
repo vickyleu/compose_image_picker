@@ -39,16 +39,20 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.huhx.app.data.IdHelper
 import com.huhx.app.data.Moment
 import com.huhx.app.data.MomentViewModel
 import com.huhx.app.data.imageUrl
 import com.huhx.app.data.username
-import java.text.SimpleDateFormat
-import java.util.Locale
+import com.huhx.picker.model.DateTimeFormatterKMP.Companion.format
+import com.huhx.picker.model.DateTimeFormatterKMP.Companion.ofPattern
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun MomentAddScreen(
@@ -68,10 +72,9 @@ fun MomentAddScreen(
                         imageUrl = imageUrl,
                         content = viewModel.content,
                         images = viewModel.selectedList.joinToString(",") { it.uriString },
-                        createTime = SimpleDateFormat(
-                            "yyyy-MM-dd HH:mm:ss",
-                            Locale.getDefault()
-                        ).format(System.currentTimeMillis())
+                        createTime = Clock.System.now().toLocalDateTime(TimeZone.UTC).format(
+                            ofPattern("yyyy-MM-dd HH:mm:ss")
+                        )
                     )
                     viewModel.addMoment(moment)
                     viewModel.content = ""

@@ -1,17 +1,15 @@
 package com.huhx.app
 
-import android.Manifest
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.huhx.app.data.MomentViewModel
-import com.huhx.picker.model.AssetInfo
-import com.huhx.picker.model.AssetPickerConfig
-import com.huhx.picker.support.PickerPermissions
-import com.huhx.picker.view.AssetPicker
 import com.huhx.app.view.MomentAddScreen
 import com.huhx.app.view.MomentListScreen
+import com.huhx.picker.model.AssetInfo
+import com.huhx.picker.model.AssetPickerConfig
+import com.huhx.picker.view.AssetPicker
 
 @Composable
 fun AppRoute(
@@ -51,11 +49,15 @@ private fun ImagePicker(
     onPicked: (List<AssetInfo>) -> Unit,
     onClose: (List<AssetInfo>) -> Unit,
 ) {
-    PickerPermissions(permissions = listOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA)) {
+    permissionHandle {
         AssetPicker(
             assetPickerConfig = AssetPickerConfig(gridCount = 3),
             onPicked = onPicked,
             onClose = onClose
         )
     }
+
 }
+
+@Composable
+expect fun permissionHandle(content: @Composable (() -> Unit))

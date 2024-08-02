@@ -68,6 +68,7 @@ internal fun AssetSelectorScreen(
                         AsyncImage(
                             model = ImageRequest.Builder(LocalPlatformContext.current)
                                 .data(it.cover ?: Icons.Default.Place)
+                                .decoderFactory(DecoderFactory())
 //                                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
                                 .build(),
                             modifier = Modifier

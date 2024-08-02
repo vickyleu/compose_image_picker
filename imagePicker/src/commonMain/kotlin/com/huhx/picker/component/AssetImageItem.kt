@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -32,10 +33,13 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
+import coil3.memory.MemoryCache
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.AssetResourceType
+import com.huhx.picker.view.DecoderFactory
 import compose_image_picker.imagepicker.generated.resources.Res
 import compose_image_picker.imagepicker.generated.resources.text_gif
 import org.jetbrains.compose.resources.stringResource
@@ -72,9 +76,18 @@ fun AssetImageItem(
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(urlString)
+                .decoderFactory(DecoderFactory())
 //                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
                 .crossfade(true)
+                .memoryCacheKey(urlString)
+//                .apply { extras.setAll(screen.image.extras) }
                 .build(),
+            /*model = ImageRequest.Builder(context)
+                .data(urlString)
+                .decoderFactory(DecoderFactory())
+//                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
+                .crossfade(true)
+                .build(),*/
             modifier = Modifier
                 .fillMaxSize()
                 .aspectRatio(1.0F)
@@ -161,6 +174,7 @@ fun SelectedAssetImageItem(
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(assetInfo.uriString)
+                .decoderFactory(DecoderFactory())
 //                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
                 .crossfade(true)
                 .build(),

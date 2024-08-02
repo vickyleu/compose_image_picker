@@ -15,6 +15,9 @@ import com.huhx.picker.model.AssetPickerConfig
 import com.huhx.picker.provider.AssetPickerRepository
 import com.huhx.picker.viewmodel.AssetViewModel
 import com.huhx.picker.viewmodel.AssetViewModelFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
 
 @Composable
 fun AssetPicker(
@@ -31,11 +34,17 @@ fun AssetPicker(
             navController = navController
         )
     )
+
+    println("viewModel:::${viewModel.hashCode()}")
+
+
     val isLoading = remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        viewModel.initDirectories()
-        isLoading.value = false
+        withContext(Dispatchers.IO){
+            viewModel.initDirectories()
+            isLoading.value = false
+        }
     }
 
     when {

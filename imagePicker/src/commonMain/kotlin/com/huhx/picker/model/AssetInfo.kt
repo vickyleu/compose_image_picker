@@ -7,10 +7,9 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.format
 import kotlinx.datetime.toLocalDateTime
 
-expect class MediaStoreKMP{
+expect class MediaStoreKMP {
     object Files {
         object FileColumns {
             val MEDIA_TYPE_IMAGE: Int
@@ -18,6 +17,7 @@ expect class MediaStoreKMP{
         }
     }
 }
+
 expect class ImageBitmapFactory {
     companion object {
         fun decodeFile(uriString: String): ImageBitmap
@@ -33,7 +33,7 @@ expect class DateTimeFormatterKMP {
     fun format(localDateTime: LocalDateTime): String
 }
 
-data class AssetInfo(
+open class AssetInfo(
     val id: Long,
     val uriString: String,
     val filepath: String,
@@ -61,11 +61,12 @@ data class AssetInfo(
         return ImageBitmapFactory.decodeFile(uriString)
     }
 
-    val dateString: String get() {
-        val instant = Instant.fromEpochMilliseconds(date)
-      return  instant.toLocalDateTime(TimeZone.UTC).toString()
+    val dateString: String
+        get() {
+            val instant = Instant.fromEpochMilliseconds(date)
+            return instant.toLocalDateTime(TimeZone.UTC).toString()
 //        return instant.atZone(ZoneId.systemDefault()).toLocalDate().toString()
-    }
+        }
 
     val resourceType: AssetResourceType = AssetResourceType.fromFileName(filename)
 
@@ -92,4 +93,16 @@ data class AssetInfo(
     private fun Long.prefixZero(): String {
         return if (this < 10) "0$this" else "$this"
     }
+
+    data object Camera : AssetInfo(
+        id = -1,
+        uriString = "",
+        filepath = "",
+        filename = "",
+        directory = "",
+        size = 0,
+        mediaType = MediaStoreKMP.Files.FileColumns.MEDIA_TYPE_IMAGE,
+        mimeType = "image/png",
+        date = 0,
+    )
 }

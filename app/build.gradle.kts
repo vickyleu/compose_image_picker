@@ -6,6 +6,10 @@ plugins{
 }
 
 kotlin{
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(libs.versions.jvmTarget.get()))
+    }
+
     androidTarget{
     }
 
@@ -41,6 +45,7 @@ android{
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     sourceSets["main"].res.srcDirs("src/androidMain/res")
     defaultConfig {
+        applicationId = "com.huhx.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
@@ -52,14 +57,18 @@ android{
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.compose.plugin.get()
+    lint{
+        abortOnError = false
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.toVersion(libs.versions.jvmTarget.get())
+        targetCompatibility = JavaVersion.toVersion(libs.versions.jvmTarget.get())
     }
 
     buildFeatures.compose = true
 
     dependencies {
         implementation(compose.uiTooling)
-
     }
 }

@@ -1,9 +1,12 @@
 package com.huhx.picker.viewmodel
 
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import coil3.Uri
@@ -19,6 +22,9 @@ internal class AssetViewModel(
     private val assetPickerRepository: AssetPickerRepository,
     private val navController: NavController,
 ) : ViewModel() {
+
+    val initialTopBarHeight = mutableStateOf(40.dp)
+    val initialBottomBarHeight =  mutableStateOf(30.dp)
 
     private val assets = mutableStateListOf<AssetInfo>()
     private val _directoryGroup = mutableStateListOf<AssetDirectory>()

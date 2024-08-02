@@ -63,7 +63,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun AssetPreviewScreen(
     index: Int,
-    assets: List<AssetInfo>,
+    assets: List<Pair<String, AssetInfo>>,
     navigateUp: () -> Unit,
     selectedList: SnapshotStateList<AssetInfo>,
     onSelectChanged: (AssetInfo) -> Unit,
@@ -73,7 +73,7 @@ fun AssetPreviewScreen(
     }
 
     val scope = rememberCoroutineScope()
-    val assetInfo = assets[pageState.currentPage]
+    val (dateString,assetInfo) = assets[pageState.currentPage]
 
     Scaffold(
         topBar = {
@@ -155,7 +155,7 @@ fun AssetPreviewScreen(
                             modifier = Modifier.size(64.dp),
                             onClick = { asset ->
                                 val selectedIndex =
-                                    assets.indexOfFirst { item -> item.id == asset.id }
+                                    assets.indexOfFirst { (_,item) -> item.id == asset.id }
                                 // 如果index == -1，说明该asset 是存在于别的时间
                                 if (selectedIndex == -1) {
                                     onSelectChanged(asset)
@@ -216,13 +216,13 @@ fun SelectorBottomBar(
 }
 
 @Composable
-private fun AssetPreview(assets: List<AssetInfo>, pagerState: PagerState) {
+private fun AssetPreview(assets: List<Pair<String,AssetInfo>>, pagerState: PagerState) {
     HorizontalPager(
         state = pagerState,
         contentPadding = PaddingValues(horizontal = 0.dp),
         modifier = Modifier.fillMaxSize()
     ) { page ->
-        val assetInfo = assets[page]
+        val (_,assetInfo) = assets[page]
         if (assetInfo.isImage()) {
             ImagePreview(uriString = assetInfo.uriString)
         } else {

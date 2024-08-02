@@ -7,7 +7,7 @@ android-targetSdk = "34"
 
 kotlin = "2.0.0"
 #compose-plugin = "1.6.11"
-compose-plugin = "1.7.0-alpha01"
+compose-plugin = "1.7.0-alpha02"
 
 jetpack-compose-bom = "2024.06.00"
 coroutines-bom = "1.8.1"
