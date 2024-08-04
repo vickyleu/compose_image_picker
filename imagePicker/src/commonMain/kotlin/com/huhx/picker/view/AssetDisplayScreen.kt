@@ -186,7 +186,7 @@ private fun Density.DisplayTopAppBar(
                         modifier = Modifier.fillMaxSize().clickable {
                             navigateUp(selectedList)
                         },
-                        contentScale = ContentScale.FillBounds,
+                        contentScale = ContentScale.FillHeight,
                     )
                 }
             },
