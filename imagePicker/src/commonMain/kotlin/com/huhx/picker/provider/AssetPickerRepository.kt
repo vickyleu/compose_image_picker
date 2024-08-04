@@ -12,15 +12,15 @@ internal class AssetPickerRepository(
         return AssetLoader.load(context, requestType)
     }
 
-    fun insertImage(): Uri? {
+    suspend fun insertImage(): Uri? {
         return AssetLoader.insertImage(context)
     }
 
-    fun findByUri(uri: Uri?): AssetInfo? {
+    suspend fun findByUri(uri: Uri?): AssetInfo? {
         return uri?.let { AssetLoader.findByUri(context, it) }
     }
 
-    fun deleteByUri(uri: Uri?) {
+    suspend fun deleteByUri(uri: Uri?) {
         uri?.let { AssetLoader.deleteByUri(context, it) }
     }
 }

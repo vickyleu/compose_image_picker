@@ -63,12 +63,12 @@ internal fun AssetSelectorScreen(
             items(items = assetDirectories) {
                 val itemDirectory = it.directory
                 ListItem(
-                    modifier = Modifier.clickable { onSelected(itemDirectory) },
+                    modifier = Modifier.clickable { onSelected(itemDirectory.second) },
                     leadingContent = {
                         AsyncImage(
                             model = ImageRequest.Builder(LocalPlatformContext.current)
                                 .data(it.cover ?: Icons.Default.Place)
-                                .decoderFactory(DecoderFactory())
+                                .decoderFactoryPlatform()
 //                                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
                                 .build(),
                             modifier = Modifier
@@ -81,12 +81,12 @@ internal fun AssetSelectorScreen(
                     },
                     headlineContent = {
                         Row {
-                            Text(text = itemDirectory, color = MaterialTheme.colorScheme.onSurface)
+                            Text(text = itemDirectory.first, color = MaterialTheme.colorScheme.onSurface)
                             Text(text = "(${it.counts})", color = Color.Gray)
                         }
                     },
                     trailingContent = {
-                        if (directory == itemDirectory) {
+                        if (directory == itemDirectory.second) {
                             Icon(imageVector = Icons.Default.Done, contentDescription = "", tint = Color.Blue)
                         }
                     }

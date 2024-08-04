@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
@@ -7,18 +9,26 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
-kotlin{
+kotlin {
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(libs.versions.jvmTarget.get()))
     }
-
-    androidTarget{
+    applyDefaultHierarchyTemplate()
+    androidTarget {
         publishLibraryVariants("release")
     }
 
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach {
+        // 包含 Objective-C 文件
+        it.compilerOptions {
+
+        }
+    }
+
 
     sourceSets {
         commonMain.get().apply {
@@ -28,6 +38,7 @@ kotlin{
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.ui)
+            implementation(compose.material)
             implementation(compose.material3)
             implementation(compose.components.resources)
 
@@ -56,21 +67,24 @@ kotlin{
             implementation(libs.coil.video)
             implementation(libs.coil.gif)
         }
+
+        iosMain.get().apply {
+        }
     }
 }
 
-android{
+android {
     namespace = "com.huhx.picker"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     sourceSets["main"].res.srcDirs("src/androidMain/res")
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
     }
-    lint{
+    lint {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
     }
-    publishing{
-        singleVariant("release"){
+    publishing {
+        singleVariant("release") {
             withSourcesJar()
             withJavadocJar()
         }

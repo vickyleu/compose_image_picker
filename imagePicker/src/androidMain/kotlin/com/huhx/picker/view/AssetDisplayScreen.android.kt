@@ -1,48 +1,76 @@
 package com.huhx.picker.view
 
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
-import coil3.PlatformContext
+import androidx.compose.runtime.setValue
 import coil3.Uri
 import coil3.toAndroidUri
+import com.huhx.picker.model.AssetInfo
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
-actual class CameraLauncher(private var launcher: androidx.activity.compose.ManagedActivityResultLauncher<android.net.Uri, Boolean>) {
-    actual fun launch(cameraUri: Uri?) {
+actual class CameraLauncher(
+    private var launcher: ManagedActivityResultLauncher<android.net.Uri, Boolean>,
+    private val scope: CoroutineScope
+) {
+    private var cameraUri: Uri? by mutableStateOf(null)
+    actual fun fetchCameraUri(assets: Map<String, List<AssetInfo>>): AssetInfo? {
+        var assetInfo: AssetInfo? = null
+        if (cameraUri != null) {
+            assets.values.forEach each@{
+                it.forEach {
+                    if (it.uriString == cameraUri.toString()) {
+                        assetInfo = it
+                        cameraUri = null
+                        return@each
+                    }
+                }
+            }
+
+        }
+        return assetInfo
+    }
+
+   actual val uri: Uri?
+        get() = cameraUri
+
+    actual fun launch(uri: Uri?) {
+        cameraUri = uri
         launcher.launch(cameraUri?.toAndroidUri())
     }
 }
 
 
 @Composable
-actual fun rememberCameraLauncher(callback: (Boolean) -> Unit): CameraLauncher {
-    return rememberCameraLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+actual fun rememberCameraLauncher(scope: CoroutineScope, callback: CameraLauncher.(Boolean) -> Unit): CameraLauncher {
+    return rememberCameraLauncherForActivityResult(scope,ActivityResultContracts.TakePicture()) { success ->
         callback(success)
     }
 }
 
 @Composable
 private fun rememberCameraLauncherForActivityResult(
+    scope: CoroutineScope,
     action: ActivityResultContracts.TakePicture,
-    callback: (Boolean) -> Unit
+    callback: CameraLauncher.(Boolean) -> Unit
 ): CameraLauncher {
+    var cameraLauncher:CameraLauncher?=null
     val launcher = rememberLauncherForActivityResult(action) { success ->
-        callback(success)
+        val launcher = cameraLauncher?:return@rememberLauncherForActivityResult
+        callback(launcher,success)
     }
     return remember {
-        CameraLauncher(launcher)
-    }
-}
-
-
-@Composable
-actual fun getScreenSize(current: PlatformContext): Dp {
-    // android 通过 context 获取屏幕宽高
-    with(LocalDensity.current) {
-        return current.resources.displayMetrics.widthPixels.toDp()
+        CameraLauncher(launcher,scope).apply {
+            cameraLauncher = this
+        }
     }
 }

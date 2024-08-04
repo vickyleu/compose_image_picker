@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
@@ -40,12 +41,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.input.key.Key.Companion.M
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
 import coil3.compose.rememberAsyncImagePainter
-import coil3.decode.Decoder
 import coil3.request.ImageRequest
 import com.huhx.picker.component.SelectedAssetImageItem
 import com.huhx.picker.model.AssetInfo
@@ -73,7 +74,7 @@ fun AssetPreviewScreen(
     }
 
     val scope = rememberCoroutineScope()
-    val (dateString,assetInfo) = assets[pageState.currentPage]
+    val (dateString, assetInfo) = assets[pageState.currentPage]
 
     Scaffold(
         topBar = {
@@ -155,7 +156,7 @@ fun AssetPreviewScreen(
                             modifier = Modifier.size(64.dp),
                             onClick = { asset ->
                                 val selectedIndex =
-                                    assets.indexOfFirst { (_,item) -> item.id == asset.id }
+                                    assets.indexOfFirst { (_, item) -> item.id == asset.id }
                                 // 如果index == -1，说明该asset 是存在于别的时间
                                 if (selectedIndex == -1) {
                                     onSelectChanged(asset)
@@ -189,14 +190,18 @@ fun SelectorBottomBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            AssetImageIndicator(
-                assetInfo = assetInfo,
-                selected = selectedList.any { it == assetInfo },
-                assetSelected = selectedList,
-                fontSize = 14.sp,
-                size = 22.dp
-            )
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.wrapContentSize()) {
+            Box(
+                modifier = Modifier.wrapContentSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                AssetImageIndicator(
+                    assetInfo = assetInfo,
+                    selected = selectedList.any { it == assetInfo },
+                    assetSelected = selectedList,
+                    fontSize = 14.sp,
+                )
+            }
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = stringResource(Res.string.text_asset_select),
@@ -216,13 +221,13 @@ fun SelectorBottomBar(
 }
 
 @Composable
-private fun AssetPreview(assets: List<Pair<String,AssetInfo>>, pagerState: PagerState) {
+private fun AssetPreview(assets: List<Pair<String, AssetInfo>>, pagerState: PagerState) {
     HorizontalPager(
         state = pagerState,
         contentPadding = PaddingValues(horizontal = 0.dp),
         modifier = Modifier.fillMaxSize()
     ) { page ->
-        val (_,assetInfo) = assets[page]
+        val (_, assetInfo) = assets[page]
         if (assetInfo.isImage()) {
             ImagePreview(uriString = assetInfo.uriString)
         } else {
@@ -241,7 +246,7 @@ fun ImagePreview(
         filterQuality = FilterQuality.Low,
         model = ImageRequest.Builder(LocalPlatformContext.current)
             .data(uriString)
-            .decoderFactory(DecoderFactory())
+            .decoderFactoryPlatform()
             .build()
     )
 
@@ -265,5 +270,4 @@ expect fun VideoPreview(
     loading: (@Composable () -> Unit)? = null,
 )
 
-
-expect fun DecoderFactory(): Decoder.Factory
+expect fun ImageRequest.Builder.decoderFactoryPlatform(): ImageRequest.Builder

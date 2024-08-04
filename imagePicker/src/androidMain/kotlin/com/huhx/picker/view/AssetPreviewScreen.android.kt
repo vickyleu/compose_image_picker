@@ -19,6 +19,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.decode.Decoder
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
+import coil3.request.ImageRequest
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -66,7 +67,6 @@ actual fun VideoPreview(
             }
         })
 }
-
-actual fun DecoderFactory(): Decoder.Factory {
-    return if (Build.VERSION.SDK_INT >= 28) AnimatedImageDecoder.Factory() else GifDecoder.Factory()
+actual fun ImageRequest. Builder.decoderFactoryPlatform(): ImageRequest.Builder{
+    return if (Build.VERSION.SDK_INT >= 28) decoderFactory(AnimatedImageDecoder.Factory()) else decoderFactory(GifDecoder.Factory())
 }

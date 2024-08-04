@@ -1,110 +1,132 @@
 package com.huhx.picker.support
 
-import android.app.Activity
-import android.app.Fragment
-import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
-import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.google.accompanist.permissions.rememberPermissionState
-import com.google.accompanist.permissions.shouldShowRationale
+import com.huhx.picker.util.LocalStoragePermission
+import com.huhx.picker.util.goToAppSetting
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
 
 @Composable
 @OptIn(ExperimentalPermissionsApi::class)
-fun PickerPermission(permission: String, content: @Composable () -> Unit) {
+fun PickerPermissions(content: @Composable () -> Unit) {
     val context = LocalContext.current
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
-    return content()
-    /*val permissionState = rememberPermissionState(permission) { permissionRequested = true }
-    if (permissionState.status.isGranted) return content()
-
-    if (!permissionRequested && !permissionState.status.shouldShowRationale) {
-        SideEffect(permissionState::launchPermissionRequest)
-    } else if (permissionRequested && permissionState.status.shouldShowRationale) {
-        SideEffect(permissionState::launchPermissionRequest)
-    } else {
-        goToSetting(context)
-    }*/
-}
-
-@Composable
-@OptIn(ExperimentalPermissionsApi::class)
-fun PickerPermissions(permissions: List<String>, content: @Composable () -> Unit) {
-    val context = LocalContext.current
-    var permissionRequested by rememberSaveable { mutableStateOf(false) }
-    return content()
-    val permissionState = rememberMultiplePermissionsState(permissions) { permissionRequested = true }
-    if (permissionState.allPermissionsGranted) return content()
-
-    if (!permissionRequested && !permissionState.shouldShowRationale) {
-        SideEffect(permissionState::launchMultiplePermissionRequest)
-    } else if (permissionRequested && permissionState.shouldShowRationale) {
-        SideEffect(permissionState::launchMultiplePermissionRequest)
-    } else {
-        goToSetting(context)
-    }
-}
-
-@RequiresApi(Build.VERSION_CODES.R)
-fun resolveAllFileAccessInfo(context: Context): Intent? {
-    val packageManager = context.packageManager
-    val intentWrap = try {
-        val intent =
-            Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-        intent.addCategory("android.intent.category.DEFAULT")
-        intent.data = Uri.parse(
-            String.format(
-                "package:%s",
-                context.packageName
-            )
-        )
-        intent
-    } catch (e: Exception) {
-        val intent = Intent()
-        intent.action = Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
-        intent
-    }
-    val resolveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        packageManager.resolveActivity(
-            intentWrap,
-            PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_ALL.toLong())
-        )
-    } else {
-        @Suppress("DEPRECATION")
-        packageManager.resolveActivity(intentWrap, 0)?.let {
-            val intent = Intent()
-            intent.action = Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
-            intent
+    var permissionsGranted by rememberSaveable { mutableStateOf(false) }
+    val lifecycle = LocalLifecycleOwner.current
+    val storagePermissionUtil = LocalStoragePermission.current?:throw IllegalStateException("LocalStoragePermission not found")
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            permissionsGranted = storagePermissionUtil.checkStoragePermission()
         }
     }
-    return if (resolveInfo != null) intentWrap else null
-}
+    val scope = rememberCoroutineScope()
 
-private fun goToSetting(context: Context) {
-    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        resolveAllFileAccessInfo(when (context) {
-            is Activity -> context
-            is Fragment -> return //context.requireActivity()
-            else -> return
-        })
-    } else {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
-        intent.addCategory(Intent.CATEGORY_DEFAULT)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    val observer = remember {
+        var lastEvent = Lifecycle.Event.ON_ANY
+        LifecycleEventObserver { source, event ->
+            if (lastEvent == event) {
+                return@LifecycleEventObserver
+            }
+            lastEvent = event
+            if (event == Lifecycle.Event.ON_RESUME) {
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        permissionsGranted = storagePermissionUtil.checkStoragePermission()
+                    }
+                }
+            }
+        }
     }
+    if (permissionsGranted) {
+        return content()
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .wrapContentSize()
+                    .border(width = 1.dp, color = Color.White, RoundedCornerShape(5.dp))
+                    .clickable {
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                if (permissionRequested && permissionsGranted.not()) {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                        storagePermissionUtil.requestStoragePermission(onGranted = {
+                                            permissionsGranted = true
+                                        }, onDenied = {
+                                            permissionsGranted = false
+                                        })
+                                    } else {
+                                        context.goToAppSetting()
+                                    }
+                                }
+                            }
+                        }
 
-    context.startActivity(intent)
+                    }
+                    .padding(horizontal = 15.dp, vertical = 10.dp)
+            ) {
+                Text(text = "无权限!", fontSize = 20.sp, color = Color.White)
+            }
+
+        }
+        if (permissionRequested.not()) {
+            LaunchedEffect(Unit) {
+                withContext(Dispatchers.IO) {
+                    storagePermissionUtil.checkStoragePermission().let {
+                        permissionsGranted = it
+
+                        if (it.not()) {
+                            permissionRequested = true
+                            storagePermissionUtil.requestStoragePermission(onGranted = {
+                                permissionsGranted = true
+                            }, onDenied = {
+                                permissionsGranted = false
+                            })
+                        }
+                    }
+                }
+            }
+        }
+    }
+    DisposableEffect(Unit) {
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.lifecycle.removeObserver(observer)
+        }
+    }
 }

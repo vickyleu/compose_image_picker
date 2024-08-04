@@ -2,6 +2,7 @@ package com.huhx.picker.component
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -30,6 +32,7 @@ import androidx.compose.ui.input.key.Key.Companion.R
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.annotation.ExperimentalCoilApi
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
@@ -39,13 +42,13 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.AssetResourceType
-import com.huhx.picker.view.DecoderFactory
+import com.huhx.picker.view.decoderFactoryPlatform
 import compose_image_picker.imagepicker.generated.resources.Res
 import compose_image_picker.imagepicker.generated.resources.text_gif
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalCoilApi::class)
 fun AssetImageItem(
     modifier: Modifier = Modifier,
     urlString: String,
@@ -76,9 +79,10 @@ fun AssetImageItem(
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(urlString)
-                .decoderFactory(DecoderFactory())
+                .decoderFactoryPlatform()
 //                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
                 .crossfade(true)
+
                 .memoryCacheKey(urlString)
 //                .apply { extras.setAll(screen.image.extras) }
                 .build(),
@@ -174,7 +178,7 @@ fun SelectedAssetImageItem(
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(assetInfo.uriString)
-                .decoderFactory(DecoderFactory())
+                .decoderFactoryPlatform()
 //                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
                 .crossfade(true)
                 .build(),

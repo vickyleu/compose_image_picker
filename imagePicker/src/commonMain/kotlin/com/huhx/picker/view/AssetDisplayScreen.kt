@@ -11,13 +11,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.waterfall
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -26,9 +28,8 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -39,7 +40,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,28 +58,32 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
 import cafe.adriel.voyager.navigator.internal.BackHandler
-import coil3.PlatformContext
 import coil3.Uri
 import coil3.compose.LocalPlatformContext
 import com.huhx.picker.component.AssetImageItem
 import com.huhx.picker.model.AssetInfo
+import com.huhx.picker.model.DateTimeFormatterKMP
 import com.huhx.picker.model.RequestType
+import com.huhx.picker.util.LocalStoragePermission
+import com.huhx.picker.util.goToAppSetting
 import com.huhx.picker.viewmodel.AssetViewModel
 import compose_image_picker.imagepicker.generated.resources.Res
 import compose_image_picker.imagepicker.generated.resources.icon_back
 import compose_image_picker.imagepicker.generated.resources.icon_camera
-import compose_image_picker.imagepicker.generated.resources.label_album
-import compose_image_picker.imagepicker.generated.resources.label_camera
 import compose_image_picker.imagepicker.generated.resources.message_selected_exceed
-import compose_image_picker.imagepicker.generated.resources.text_select_tip
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
-import kotlinx.datetime.LocalDateTime
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -118,39 +122,45 @@ internal fun AssetDisplayScreen(
     val initialTopBarHeight = remember { viewModel.initialTopBarHeight }
     val initialBottomBarHeight = remember { viewModel.initialBottomBarHeight }
 
-    Scaffold(
-        containerColor = Color.Black,
-        topBar = {
-            DisplayTopAppBar(
-                selectedList = viewModel.selectedList,
-                navigateUp = onClose,
-                initialTopBarHeight = initialTopBarHeight,
-            )
-        },
-        bottomBar = {
-            DisplayBottomBar(
-                viewModel, onPicked,
-                initialBottomBarHeight = initialBottomBarHeight,
-                navigateToDropDown = navigateToDropDown
-            )
-        }
-    ) {
-        Box(
-            modifier = Modifier
-                .statusBarsPadding()
-                .padding(top = initialTopBarHeight.value)
-                .fillMaxSize()
+    with(LocalDensity.current) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            contentWindowInsets = WindowInsets.waterfall,
+            containerColor = Color.Black,
+            topBar = {
+                DisplayTopAppBar(
+                    selectedList = viewModel.selectedList,
+                    navigateUp = onClose, onPicked = onPicked,
+                    initialTopBarHeight = initialTopBarHeight,
+                )
+            },
+            bottomBar = {
+                DisplayBottomBar(
+                    viewModel,
+                    initialBottomBarHeight = initialBottomBarHeight,
+                    navigateToDropDown = navigateToDropDown
+                )
+            }
         ) {
-            AssetContent(viewModel, RequestType.IMAGE, initialBottomBarHeight)
+            Box(
+                modifier = Modifier
+                    .background(Color.Gray)
+                    .padding(top = initialTopBarHeight.value)
+                    .fillMaxSize()
+            ) {
+                AssetContent(viewModel, RequestType.IMAGE, initialBottomBarHeight)
+            }
         }
     }
+
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun DisplayTopAppBar(
+private fun Density.DisplayTopAppBar(
     selectedList: List<AssetInfo>,
     navigateUp: (List<AssetInfo>) -> Unit,
+    onPicked: (List<AssetInfo>) -> Unit,
     initialTopBarHeight: MutableState<Dp>,
 ) {
     with(LocalDensity.current) {
@@ -158,13 +168,13 @@ private fun DisplayTopAppBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
-                .statusBarsPadding()
                 .onGloballyPositioned {
                     val height = it.size.height.toDp()
                     if (initialTopBarHeight.value < height) {
                         initialTopBarHeight.value = height
                     }
-                },
+                }
+                .padding(top = WindowInsets.statusBars.getTop(this).toDp()),
             navigationIcon = {
                 Box(
                     modifier = Modifier.size(48.dp)
@@ -195,8 +205,13 @@ private fun DisplayTopAppBar(
                 Box(
                     modifier = Modifier
                         .wrapContentSize()
-                        .background(Color.Green, RoundedCornerShape(3.dp))
+                        .background(ButtonDefaults.buttonColors().let {
+                            if (selectedList.isEmpty()) Color.Gray else it.containerColor
+                        }, RoundedCornerShape(3.dp))
                         .clip(RoundedCornerShape(3.dp))
+                        .clickable(enabled = selectedList.isNotEmpty()) {
+                            onPicked(selectedList)
+                        }
                         .padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
                     val maxAssets = LocalAssetConfig.current.maxAssets
@@ -213,83 +228,36 @@ private fun DisplayTopAppBar(
 
 
 @Composable
-private fun DisplayBottomBar(
+private fun Density.DisplayBottomBar(
     viewModel: AssetViewModel,
-    onPicked: (List<AssetInfo>) -> Unit,
     initialBottomBarHeight: MutableState<Dp>,
     navigateToDropDown: (String) -> Unit
 ) {
-
-
     with(LocalDensity.current) {
-        if (viewModel.selectedList.isEmpty()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Black.copy(alpha = 0.7f))
-                    .onGloballyPositioned {
-                        val height = it.size.height.toDp()
-                        if (initialBottomBarHeight.value < height) {
-                            initialBottomBarHeight.value = height
-                        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Black.copy(alpha = 0.7f))
+                .onGloballyPositioned {
+                    val height = it.size.height.toDp()
+                    if (initialBottomBarHeight.value < height) {
+                        initialBottomBarHeight.value = height
                     }
-                    .pointerInput(Unit) {
-                        detectTapGestures {
-                            //
-                        }
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        //
                     }
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceAround
-            ) {
-                Text(viewModel.directory, fontSize = 16.sp, color = Color.Gray)
-                TextButton(
-                    onClick = {
-
-
-                    },
-                    content = {
-                        Text(
-                            text = stringResource(Res.string.label_camera),
-                            fontSize = 16.sp,
-                            color = Color.Gray
-                        )
-                    }
-                )
-                TextButton(
-                    onClick = {},
-                    content = {
-                        Text(
-                            text = stringResource(Res.string.label_album),
-                            fontSize = 16.sp
-                        )
-                    }
-                )
-            }
-        } else {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Black.copy(alpha = 0.7f))
-                    .onGloballyPositioned {
-                        val height = it.size.height.toDp()
-                        if (initialBottomBarHeight.value < height) {
-                            initialBottomBarHeight.value = height
-                        }
-                    }
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(Res.string.text_select_tip),
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-                AppBarButton(
-                    size = viewModel.selectedList.size,
-                    onPicked = { onPicked(viewModel.selectedList) }
-                )
-            }
+                }
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceAround
+        ) {
+            TextButton(
+                onClick = { navigateToDropDown(viewModel.directory.second) },
+                content = {
+                    Text(viewModel.directory.first, fontSize = 16.sp, color = Color.White)
+                }
+            )
         }
     }
 }
@@ -301,7 +269,8 @@ private fun AssetContent(
     requestType: RequestType,
     padding: MutableState<Dp>
 ) {
-    val assets = remember{viewModel.getGroupedAssets(requestType)}
+    var assets by remember { mutableStateOf(viewModel.getGroupedAssets(requestType)) }
+    println("AssetContent: ${assets.size}")
     val context = LocalPlatformContext.current
     val gridCount = LocalAssetConfig.current.gridCount
     val maxAssets = LocalAssetConfig.current.maxAssets
@@ -320,30 +289,59 @@ private fun AssetContent(
             )
         }
     }
-    var cameraUri: Uri? by remember { mutableStateOf(null) }
     val scope = rememberCoroutineScope()
 
-    val cameraLauncher = rememberCameraLauncher { success ->
+    val cameraLauncher = rememberCameraLauncher(scope) { success ->
         if (success) {
-            cameraUri?.let { scope.launch { viewModel.initDirectories() } }
+            scope.launch { viewModel.initDirectories() }
         } else {
-            viewModel.deleteImage(cameraUri)
+            scope.launch { viewModel.deleteImage(this@rememberCameraLauncher.uri) }
         }
     }
 
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.assets.size }
+            .distinctUntilChanged()
+            .filter { it>0 }
+            .distinctUntilChanged()
+            .collect {
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        val a = viewModel.getGroupedAssets(requestType)
+                        if(a.isNotEmpty()){
+                            cameraLauncher.fetchCameraUri(a)?.let {
+                                viewModel.selectedList.add(it)
+                            }
+                        }
+                        assets = a
+                    }
+                }
+            }
+    }
+
+
     // 需要将assets 排序,最后将所有list flatten 到一个list里面去
-    val flattenedList = remember {
+    val dtf = remember { DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日 HH:mm:ss") }
+    val flattenedList = remember(assets) {
         listOf("-" to AssetInfo.Camera, *(assets.toList().sortedByDescending {
-            LocalDateTime.parse(it.first)
+            dtf.parse(it.first)
         }.flatMap { (time, list) ->
             list.map {
                 time to it
             }.sortedByDescending {
-                LocalDateTime.parse(it.first)
+                dtf.parse(it.first)
             }
         }.toTypedArray()))
+    }
 
+    val impl = LocalStoragePermission.current
+        ?: throw IllegalStateException("LocalStoragePermission not found")
+    var cameraPermission by remember { mutableStateOf(false) }
+    var cameraPermissionRequested by remember { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) {
+        cameraPermission = impl.checkCameraPermission()
     }
 
     LazyVerticalGrid(
@@ -366,15 +364,44 @@ private fun AssetContent(
                         assetInfo = assetInfo,
                         navigateToPreview = {
                             viewModel.navigateToPreview(
-                                index-1,
+                                index - 1,
                                 time,
                                 requestType
                             )
                         },
                         selectedList = viewModel.selectedList,
                         onCameraClicks = {
-                            cameraUri = viewModel.getUri()
-                            cameraLauncher.launch(cameraUri)
+                            scope.launch {
+                                cameraPermission = impl.checkCameraPermission()
+                                if (cameraPermission.not()) {
+                                    withContext(Dispatchers.IO) {
+                                        if (cameraPermission) {
+                                            cameraLauncher.launch(viewModel.getUri())
+                                            return@withContext
+                                        }
+                                        if (cameraPermissionRequested) {
+                                            context.goToAppSetting()
+                                            return@withContext
+                                        }
+                                        cameraPermissionRequested = true
+                                        impl.requestCameraPermission(
+                                            onGranted = {
+                                                cameraPermission = true
+                                                scope.launch {
+                                                    cameraLauncher.launch(viewModel.getUri())
+                                                }
+                                            },
+                                            onDenied = {
+                                                showToast(context, "请授予相机权限")
+                                                context.goToAppSetting()
+                                            }
+                                        )
+                                    }
+                                    return@launch
+                                } else {
+                                    cameraLauncher.launch(viewModel.getUri())
+                                }
+                            }
                         },
                         onLongClick = { selected ->
                             viewModel.toggleSelect(
@@ -393,9 +420,6 @@ private fun AssetContent(
 }
 
 @Composable
-expect fun getScreenSize(current: PlatformContext): Dp
-
-@Composable
 private fun AssetImage(
     modifier: Modifier = Modifier,
     assetInfo: AssetInfo,
@@ -407,19 +431,21 @@ private fun AssetImage(
     val context = LocalPlatformContext.current
     val maxAssets = LocalAssetConfig.current.maxAssets
 
-    if(assetInfo is AssetInfo.Camera) {
+    if (assetInfo is AssetInfo.Camera) {
         val errorMessage = stringResource(Res.string.message_selected_exceed, maxAssets)
         Box(
-            modifier = modifier.fillMaxSize().clickable {
-                if (selectedList.size < maxAssets) {
-                    onCameraClicks()
-                } else {
-                    showToast(context, errorMessage)
-                }
-            },
-        ){
+            modifier = modifier.fillMaxSize()
+                .background(Color.Black)
+                .clickable {
+                    if (selectedList.size < maxAssets) {
+                        onCameraClicks()
+                    } else {
+                        showToast(context, errorMessage)
+                    }
+                },
+        ) {
             Column(
-                modifier=Modifier
+                modifier = Modifier
                     .align(Alignment.Center)
                     .fillMaxWidth().wrapContentHeight(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -427,20 +453,21 @@ private fun AssetImage(
                 Image(
                     painter = painterResource(Res.drawable.icon_camera),
                     contentDescription = "",
-                    modifier=Modifier.wrapContentSize()
+                    modifier = Modifier.wrapContentSize()
                 )
                 Text("拍照", fontSize = 12.sp, color = Color.White)
             }
         }
 
-      return
-    }else{
+        return
+    } else {
         val errorMessage = stringResource(Res.string.message_selected_exceed, maxAssets)
-        val selected = remember(assetInfo.id) { mutableStateOf(selectedList.any { it.id == assetInfo.id }) }
-        LaunchedEffect(Unit){
+        val selected =
+            remember(assetInfo.id) { mutableStateOf(selectedList.any { it.id == assetInfo.id }) }
+        LaunchedEffect(Unit) {
             snapshotFlow { selectedList.size }
                 .distinctUntilChanged()
-                .collect{
+                .collect {
                     selected.value = selectedList.any { it.id == assetInfo.id }
                 }
         }
@@ -473,11 +500,11 @@ private fun AssetImage(
     }
 }
 
-
-
 expect class CameraLauncher {
-    fun launch(cameraUri: Uri?)
+    fun launch(uri: Uri?)
+    fun fetchCameraUri(assets: Map<String, List<AssetInfo>>): AssetInfo?
+    val uri: Uri?
 }
 
 @Composable
-expect fun rememberCameraLauncher(callback: (Boolean) -> Unit): CameraLauncher
+expect fun rememberCameraLauncher(scope:CoroutineScope,callback: CameraLauncher.(Boolean) -> Unit): CameraLauncher

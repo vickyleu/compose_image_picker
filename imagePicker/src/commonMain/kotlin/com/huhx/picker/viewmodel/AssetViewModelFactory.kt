@@ -13,12 +13,6 @@ internal class AssetViewModelFactory(
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: KClass<T>, extras: CreationExtras): T {
-        return if (modelClass.isAssignableFromKMP(AssetViewModel::class)) {
-            AssetViewModel(assetPickerRepository, navController) as T
-        } else {
-            throw IllegalArgumentException("ViewModel is Missing")
-        }
+        return AssetViewModel(assetPickerRepository, navController) as T
     }
 }
-
-expect fun KClass<*>.isAssignableFromKMP(clazz: KClass<*>): Boolean

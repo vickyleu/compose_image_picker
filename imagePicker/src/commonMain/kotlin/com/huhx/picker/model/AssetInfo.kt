@@ -1,9 +1,5 @@
 package com.huhx.picker.model
 
-import androidx.compose.ui.graphics.ImageBitmap
-import com.huhx.picker.model.DateTimeFormatterKMP.Companion.format
-import com.huhx.picker.util.StringUtil
-import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -18,23 +14,18 @@ expect class MediaStoreKMP {
     }
 }
 
-expect class ImageBitmapFactory {
-    companion object {
-        fun decodeFile(uriString: String): ImageBitmap
-    }
-}
 
 expect class DateTimeFormatterKMP {
     companion object {
         fun LocalDateTime.format(formatter: DateTimeFormatterKMP): String
         fun ofPattern(pattern: String): DateTimeFormatterKMP
     }
-
     fun format(localDateTime: LocalDateTime): String
+    fun parse(time: String):LocalDateTime
 }
 
 open class AssetInfo(
-    val id: Long,
+    val id: String,
     val uriString: String,
     val filepath: String,
     val filename: String,
@@ -57,28 +48,19 @@ open class AssetInfo(
         return mediaType == MediaStoreKMP.Files.FileColumns.MEDIA_TYPE_VIDEO
     }
 
-    fun getBitmap(): ImageBitmap {
-        return ImageBitmapFactory.decodeFile(uriString)
+    companion object {
+        private val formatter = DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日")
     }
 
     val dateString: String
         get() {
             val instant = Instant.fromEpochMilliseconds(date)
-            return instant.toLocalDateTime(TimeZone.UTC).toString()
+            return formatter.format(instant.toLocalDateTime(TimeZone.UTC))
 //        return instant.atZone(ZoneId.systemDefault()).toLocalDate().toString()
         }
 
     val resourceType: AssetResourceType = AssetResourceType.fromFileName(filename)
 
-    // todo: 这种方式还是存在问题
-    val randomName: String = run {
-        val formatter = DateTimeFormatterKMP.ofPattern("yyyyMMddHHmmss")
-        val dateTimeString = Clock.System.now().toLocalDateTime(TimeZone.UTC).format(formatter)
-        val fileExtension = filename.split(".").last()
-        val randomString = StringUtil.randomNumeric(6)
-
-        "${dateTimeString}$randomString.$fileExtension"
-    }
 
     fun formatDuration(): String {
         if (duration == null) {
@@ -95,7 +77,7 @@ open class AssetInfo(
     }
 
     data object Camera : AssetInfo(
-        id = -1,
+        id = "-1",
         uriString = "",
         filepath = "",
         filename = "",

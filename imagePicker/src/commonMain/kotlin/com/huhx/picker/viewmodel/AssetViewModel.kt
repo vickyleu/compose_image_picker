@@ -1,22 +1,24 @@
 package com.huhx.picker.viewmodel
 
-import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import coil3.Uri
 import com.huhx.picker.AssetRoute
+import com.huhx.picker.formatDirectoryName
 import com.huhx.picker.model.AssetDirectory
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.RequestType
 import com.huhx.picker.provider.AssetPickerRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
 
-const val init_directory = "Photos/Videos"
+val init_directory = "所有图片" to "所有图片"
 
 internal class AssetViewModel(
     private val assetPickerRepository: AssetPickerRepository,
@@ -24,9 +26,9 @@ internal class AssetViewModel(
 ) : ViewModel() {
 
     val initialTopBarHeight = mutableStateOf(40.dp)
-    val initialBottomBarHeight =  mutableStateOf(30.dp)
+    val initialBottomBarHeight = mutableStateOf(30.dp)
 
-    private val assets = mutableStateListOf<AssetInfo>()
+    val assets = mutableStateListOf<AssetInfo>()
     private val _directoryGroup = mutableStateListOf<AssetDirectory>()
 
     val directoryGroup: List<AssetDirectory>
@@ -36,15 +38,23 @@ internal class AssetViewModel(
     var directory by mutableStateOf(init_directory)
 
     suspend fun initDirectories() {
-        initAssets(RequestType.COMMON)
-        val directoryList = assets.groupBy {
-            it.directory
-        }.map {
-            AssetDirectory(directory = it.key, assets = it.value)
+        withContext(Dispatchers.IO){
+            initAssets(RequestType.COMMON)
+            withContext(Dispatchers.Default){
+                val directoryList = assets.groupBy {
+                    it.directory
+                }.map {
+                    AssetDirectory(directory = formatDirectoryName(it.key) to it.key, assets = it.value)
+                }.apply {
+                    println("initDirectories: ${this.size} ${assets.size}")
+                }
+                _directoryGroup.clear()
+
+                println("assets: ${assets.size}")
+                _directoryGroup.add(AssetDirectory(directory = init_directory, assets = assets))
+                _directoryGroup.addAll(directoryList)
+            }
         }
-        _directoryGroup.clear()
-        _directoryGroup.add(AssetDirectory(directory = init_directory, assets = assets))
-        _directoryGroup.addAll(directoryList)
     }
 
     fun clear() {
@@ -60,8 +70,9 @@ internal class AssetViewModel(
     }
 
     fun getGroupedAssets(requestType: RequestType): Map<String, List<AssetInfo>> {
-        val assetList = _directoryGroup.first { it.directory == directory }.assets
-
+        val assetList = _directoryGroup.first {
+            it.directory == directory
+        }.assets
         return assetList.filter {
             when (requestType) {
                 RequestType.COMMON -> true
@@ -90,11 +101,11 @@ internal class AssetViewModel(
         navController.navigate(AssetRoute.preview(index, dateString, requestType))
     }
 
-    fun deleteImage(cameraUri: Uri?) {
+    suspend fun deleteImage(cameraUri: Uri?) {
         assetPickerRepository.deleteByUri(cameraUri)
     }
 
-    fun getUri(): Uri? {
+    suspend fun getUri(): Uri? {
         return assetPickerRepository.insertImage()
     }
 

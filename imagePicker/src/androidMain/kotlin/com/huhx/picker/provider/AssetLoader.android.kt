@@ -11,11 +11,14 @@ import coil3.toAndroidUri
 import coil3.toCoilUri
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.RequestType
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 internal actual abstract class AssetLoader {
 
     actual companion object {
-        actual fun insertImage(context: PlatformContext): Uri? {
+        actual suspend  fun insertImage(context: PlatformContext): Uri? {
             val contentValues = ContentValues().apply {
                 put(
                     MediaStore.Images.Media.DISPLAY_NAME,
@@ -29,11 +32,11 @@ internal actual abstract class AssetLoader {
             )?.toCoilUri()
         }
 
-        actual fun deleteByUri(context: PlatformContext, uri: Uri) {
+        actual suspend  fun deleteByUri(context: PlatformContext, uri: Uri) {
             context.contentResolver.delete(uri.toAndroidUri(), null, null)
         }
 
-        actual fun findByUri(context: PlatformContext, uri: Uri): AssetInfo? {
+        actual suspend  fun findByUri(context: PlatformContext, uri: Uri): AssetInfo? {
             val cursor =
                 context.contentResolver.query(
                     uri.toAndroidUri(),
@@ -65,7 +68,7 @@ internal actual abstract class AssetLoader {
                         }
 
                     return AssetInfo(
-                        id = id,
+                        id = id.toString(),
                         uriString = it.getString(filepathIndex),
                         filepath = it.getString(indexFilepath),
                         filename = it.getString(indexFilename),
@@ -81,53 +84,58 @@ internal actual abstract class AssetLoader {
             return null
         }
 
-        actual fun load(context: PlatformContext, requestType: RequestType): List<AssetInfo> {
-            val assets = ArrayList<AssetInfo>()
+        actual suspend  fun load(context: PlatformContext, requestType: RequestType): List<AssetInfo> {
+            val assets = mutableListOf<AssetInfo>()
             val cursor = createCursor(context, requestType)
-            cursor?.use {
-                val indexId = it.getColumnIndex(projection[0])
-                val indexFilename = it.getColumnIndex(projection[1])
-                val indexDate = it.getColumnIndex(projection[2])
-                val indexMediaType = it.getColumnIndex(projection[3])
-                val indexMimeType = it.getColumnIndex(projection[4])
-                val indexSize = it.getColumnIndex(projection[5])
-                val indexDuration = it.getColumnIndex(projection[6])
-                val indexDirectory = it.getColumnIndex(projection[7])
-                val indexFilepath = it.getColumnIndex(projection[8])
+            val completer = CompletableDeferred<MutableList<AssetInfo>>()
+            withContext(Dispatchers.IO){
+                cursor?.use {
+                    val indexId = it.getColumnIndex(projection[0])
+                    val indexFilename = it.getColumnIndex(projection[1])
+                    val indexDate = it.getColumnIndex(projection[2])
+                    val indexMediaType = it.getColumnIndex(projection[3])
+                    val indexMimeType = it.getColumnIndex(projection[4])
+                    val indexSize = it.getColumnIndex(projection[5])
+                    val indexDuration = it.getColumnIndex(projection[6])
+                    val indexDirectory = it.getColumnIndex(projection[7])
+                    val indexFilepath = it.getColumnIndex(projection[8])
 
-                while (it.moveToNext()) {
+                    while (it.moveToNext()) {
 
-                    val id = it.getLong(indexId)
-                    val mediaType = it.getInt(indexMediaType)
-                    val contentUri =
-                        if (mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE) {
-                            ContentUris.withAppendedId(
-                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                                id
+                        val id = it.getLong(indexId)
+                        val mediaType = it.getInt(indexMediaType)
+                        val contentUri =
+                            if (mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE) {
+                                ContentUris.withAppendedId(
+                                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                                    id
+                                )
+                            } else {
+                                ContentUris.withAppendedId(
+                                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                                    id
+                                )
+                            }
+                        println("load: ${contentUri} ${it.getString(indexFilename)}")
+                        assets.add(
+                            AssetInfo(
+                                id = id.toString(),
+                                uriString = contentUri.toString(),
+                                filepath = it.getString(indexFilepath),
+                                filename = it.getString(indexFilename),
+                                date = it.getLong(indexDate),
+                                mediaType = mediaType,
+                                mimeType = it.getString(indexMimeType),
+                                size = it.getLong(indexSize),
+                                duration = it.getLong(indexDuration),
+                                directory = it.getStringOrNull(indexDirectory)?:"",
                             )
-                        } else {
-                            ContentUris.withAppendedId(
-                                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                                id
-                            )
-                        }
-                    println("load: ${contentUri} ${it.getString(indexFilename)}")
-                    assets.add(
-                        AssetInfo(
-                            id = id,
-                            uriString = contentUri.toString(),
-                            filepath = it.getString(indexFilepath),
-                            filename = it.getString(indexFilename),
-                            date = it.getLong(indexDate),
-                            mediaType = mediaType,
-                            mimeType = it.getString(indexMimeType),
-                            size = it.getLong(indexSize),
-                            duration = it.getLong(indexDuration),
-                            directory = it.getStringOrNull(indexDirectory)?:"",
                         )
-                    )
+                    }
                 }
+                completer.complete(assets)
             }
+            completer.await()
             return assets
         }
 

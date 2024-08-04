@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.huhx.picker.model.AssetInfo
+import com.huhx.picker.model.DateTimeFormatterKMP
 import com.huhx.picker.model.RequestType
 import com.huhx.picker.view.AssetDisplayScreen
 import com.huhx.picker.view.AssetPreviewScreen
@@ -49,7 +50,7 @@ internal fun AssetPickerRoute(
                 navigateUp = { navController.navigateUp() },
                 onSelected = { name ->
                     navController.navigateUp()
-                    viewModel.directory = name
+                    viewModel.directory = formatDirectoryName(name) to name
                 },
             )
         }
@@ -68,14 +69,15 @@ internal fun AssetPickerRoute(
             var index by remember {
                 mutableIntStateOf(arguments.getInt("index"))
             }
+            val dtf = remember{ DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日 HH:mm:ss") }
             val flattenedList = remember {
                 assets.toList().sortedByDescending {
-                    LocalDateTime.parse(it.first)
+                    dtf.parse(it.first)
                 }.flatMap { (time, list) ->
                     list.map {
                         time to it
                     }.sortedByDescending {
-                        LocalDateTime.parse(it.first)
+                        dtf.parse(it.first)
                     }
                 }
             }
@@ -92,6 +94,18 @@ internal fun AssetPickerRoute(
                 }
             )
         }
+    }
+}
+
+//相册名称格式化成中文名字
+fun formatDirectoryName(name: String): String {
+    return when (name) {
+        "Camera" -> "相机"
+        "Screenshots" -> "截图"
+        "Download" -> "下载"
+        "Pictures" -> "图片"
+        "Movies" -> "视频"
+        else -> name
     }
 }
 

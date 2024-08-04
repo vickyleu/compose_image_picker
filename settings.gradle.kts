@@ -241,5 +241,5 @@ dependencyResolutionManagement {
 rootProject.name = "compose_image_picker"
 include(
     ":imagePicker",
-    ":app",
+    ":composeApp",
 )
