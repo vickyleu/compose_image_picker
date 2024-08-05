@@ -35,13 +35,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.input.key.Key.Companion.M
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImagePainter
@@ -50,6 +51,7 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import com.huhx.picker.component.SelectedAssetImageItem
 import com.huhx.picker.model.AssetInfo
+import com.huhx.picker.model.DateTimeFormatterKMP
 import com.huhx.picker.util.vibration
 import compose_image_picker.imagepicker.generated.resources.Res
 import compose_image_picker.imagepicker.generated.resources.preview_title_image
@@ -57,6 +59,9 @@ import compose_image_picker.imagepicker.generated.resources.preview_title_video
 import compose_image_picker.imagepicker.generated.resources.text_asset_select
 import compose_image_picker.imagepicker.generated.resources.text_done
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,8 +98,16 @@ fun AssetPreviewScreen(
                                 color = Color.White
                             )
                         )
+                        val dateString = remember(assetInfo.date) {
+                            val localDateTime = Instant.fromEpochMilliseconds(assetInfo.date)
+                                .toLocalDateTime(TimeZone.UTC)
+                            val ds =
+                                DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日 HH:mm:ss").format(localDateTime)
+                            mutableStateOf(ds)
+                        }
+
                         Text(
-                            text = assetInfo.dateString,
+                            text = dateString.value,
                             style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
                         )
                     }

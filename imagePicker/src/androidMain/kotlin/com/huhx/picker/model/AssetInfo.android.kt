@@ -3,10 +3,17 @@ package com.huhx.picker.model
 import android.os.Build
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.format
 import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.datetime.toLocalDateTime
 import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -24,10 +31,19 @@ actual class MediaStoreKMP {
 actual class DateTimeFormatterKMP(private val formatter: Any) {
     actual companion object {
         @RequiresApi(Build.VERSION_CODES.O)
+        private val reservedPattern = DateTimeFormatter.ofPattern("yyyy年MM月dd日",Locale.getDefault())
+        @RequiresApi(Build.VERSION_CODES.O)
         actual fun LocalDateTime.format(formatter: DateTimeFormatterKMP): String {
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                (formatter.formatter as java.time.format.DateTimeFormatter).let {
-                    this.toJavaLocalDateTime().format(it)
+                (formatter.formatter as DateTimeFormatter).let {
+                    val format = it
+                    this.toJavaLocalDateTime().let {
+                       try {
+                            it.format(format).toString()
+                        }catch (e:Exception){
+                            reservedPattern.format(it.toLocalDate().atStartOfDay())
+                        }
+                    }
                 }
             } else {
                 (formatter.formatter as SimpleDateFormat).let {
@@ -40,7 +56,7 @@ actual class DateTimeFormatterKMP(private val formatter: Any) {
         @RequiresApi(Build.VERSION_CODES.O)
         actual fun ofPattern(pattern: String): DateTimeFormatterKMP {
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                DateTimeFormatterKMP(java.time.format.DateTimeFormatter.ofPattern(pattern))
+                DateTimeFormatterKMP(DateTimeFormatter.ofPattern(pattern))
             } else {
                 DateTimeFormatterKMP(SimpleDateFormat(pattern, Locale.getDefault()))
             }
@@ -49,8 +65,14 @@ actual class DateTimeFormatterKMP(private val formatter: Any) {
 
     actual fun parse(time: String): LocalDateTime {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val temporalAccessor = (formatter as java.time.format.DateTimeFormatter).parse(time)
-            val localDateTime = java.time.LocalDateTime.from(temporalAccessor)
+            val localDateTime =   try {
+                java.time.LocalDateTime.from((formatter as DateTimeFormatter).parse(time))
+            }catch (e:Exception){
+                reservedPattern.parse(time).let {
+                    val ld = java.time.LocalDate.from(it)
+                    ld.atStartOfDay()
+                }
+            }
             localDateTime.toKotlinLocalDateTime()
         } else {
             val date = (formatter as SimpleDateFormat).parse(time)
