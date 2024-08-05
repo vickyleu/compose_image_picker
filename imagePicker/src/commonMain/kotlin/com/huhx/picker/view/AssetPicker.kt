@@ -63,3 +63,6 @@ fun AssetPicker(
         }
     }
 }
+
+@Composable
+expect fun permissionHandle(content: @Composable (() -> Unit))

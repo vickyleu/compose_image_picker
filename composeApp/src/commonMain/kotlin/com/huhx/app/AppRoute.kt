@@ -10,6 +10,7 @@ import com.huhx.app.view.MomentListScreen
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.AssetPickerConfig
 import com.huhx.picker.view.AssetPicker
+import com.huhx.picker.view.permissionHandle
 
 @Composable
 fun AppRoute(
@@ -58,6 +59,3 @@ fun ImagePicker(
     }
 
 }
-
-@Composable
-expect fun permissionHandle(content: @Composable (() -> Unit))

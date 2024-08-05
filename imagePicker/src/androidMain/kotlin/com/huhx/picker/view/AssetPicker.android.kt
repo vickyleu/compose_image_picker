@@ -1,4 +1,4 @@
-package com.huhx.app
+package com.huhx.picker.view
 
 import androidx.compose.runtime.Composable
 import com.huhx.picker.support.PickerPermissions
