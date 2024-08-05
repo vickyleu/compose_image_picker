@@ -45,7 +45,7 @@ fun AppRoute(
 }
 
 @Composable
-private fun ImagePicker(
+fun ImagePicker(
     onPicked: (List<AssetInfo>) -> Unit,
     onClose: (List<AssetInfo>) -> Unit,
 ) {
