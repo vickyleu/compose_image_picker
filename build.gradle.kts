@@ -109,7 +109,11 @@ allprojects {
         }
     }
     val jvmTarget = map["jvmTarget"] ?: "11"
-    val rootProjectName = rootProject.name
+    val rootProjectName = rootDir.name.lowercase()
+        .replace("compose-", "")
+        .replace("compose_", "")
+        .replace("compose", "")
+
     val mavenAuthor = "vickyleu"
     val mavenGroup = "com.$mavenAuthor.$rootProjectName"
     val mVersion = "1.0.2"
@@ -118,7 +122,7 @@ allprojects {
     if (rootProject.name == currentName) {
         return@allprojects
     }
-    if (project.name.contains("sample") || project.parent?.name?.contains("sample") == true) {
+    if (project.name.contains("composeApp") ||project.name.contains("sample") || project.parent?.name?.contains("sample") == true) {
         return@allprojects
     }
     println("currentName: ${project.parent?.name} - ${project.name}")
@@ -158,7 +162,7 @@ allprojects {
             archiveClassifier = "javadoc"
         }
         publishing {
-            val projectName = rootProjectName
+            val projectName = rootDir.name
             repositories {
                 maven {
                     name = "GitHubPackages"
@@ -171,32 +175,14 @@ allprojects {
             }
             afterEvaluate {
                 publications.withType<MavenPublication> {
-
-//                    if(artifactId.endsWith("-android")){
-//                        println("有毛病啊::${artifactId}")
-//                        from(components["release"])
-//                    }else{
-//
-//                    }
                     artifact(javadocJar)
-
-                    /*when {
-                        project.extensions.findByName("javaPlatform") != null && components["javaPlatform"] != null -> {
-                            from(components["javaPlatform"])
-                        }
-                        project.extensions.findByName("android") != null
-                            && artifactId.endsWith("-android")
-                            && components["release"] != null -> {
-                            from(components["release"])
-                        }
-                        else -> artifact(javadocJar) // Required a workaround. See below
-                    }*/
                     version = mVersion
                     groupId = mGroup
                     if (artifactId.startsWith("${rootProjectName}-${currentName}")) {
                         artifactId =
                             artifactId.replace("${rootProjectName}-${currentName}", currentName)
                     }
+                    artifactId = artifactId.lowercase()
                     println("artifactId: $artifactId \"${rootProjectName}-${currentName}\"")
                     pom {
                         url = "https://github.com/$mavenAuthor/${projectName}"
@@ -298,9 +284,11 @@ tasks.register("deletePackages") {
         }
     }
 
-    val rootProjectName = rootDir.name
+    val rootProjectName = rootDir.name.lowercase()
         .replace("compose-", "")
-        .replace("-multiplatform", "")
+        .replace("compose_", "")
+        .replace("compose", "")
+
 
     val mavenAuthor = "vickyleu"
     val mavenGroup = "com.$mavenAuthor.$rootProjectName"
