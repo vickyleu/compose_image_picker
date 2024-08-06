@@ -15,7 +15,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-internal actual abstract class AssetLoader {
+ actual abstract class AssetLoader {
 
     actual companion object {
         actual suspend  fun insertImage(context: PlatformContext): Uri? {

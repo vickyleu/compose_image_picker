@@ -30,7 +30,7 @@ import platform.darwin.dispatch_semaphore_create
 import platform.darwin.dispatch_semaphore_signal
 import platform.darwin.dispatch_semaphore_wait
 
-internal actual abstract class AssetLoader {
+ actual abstract class AssetLoader {
 
     actual companion object {
         private fun Uri.toNativeUri(): NSURL {

@@ -5,7 +5,7 @@ import coil3.Uri
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.RequestType
 
-internal expect abstract class AssetLoader {
+expect abstract class AssetLoader {
     companion object {
         suspend fun insertImage(context: PlatformContext): Uri?
         suspend fun deleteByUri(context: PlatformContext, uri: Uri)
