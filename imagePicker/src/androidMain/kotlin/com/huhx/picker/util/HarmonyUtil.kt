@@ -8,7 +8,7 @@ import android.text.TextUtils
 /**
  * 获取鸿蒙系统信息
  */
-object HarmonyUtil {
+internal object HarmonyUtil {
     val isHarmonyOs: Boolean
         /**
          * 是否为鸿蒙系统
@@ -25,10 +25,10 @@ object HarmonyUtil {
 //        Log.i("HarmonyUtil", "当前设备是鸿蒙系统")
                 isHarmony
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (ignored: Exception) {
             false
         }
+    @JvmStatic
     val harmonyVersion: String
         /**
          * 获取鸿蒙系统版本号
@@ -48,7 +48,7 @@ object HarmonyUtil {
                 val subString = it.substring(it.indexOf(harmonyVersion), it.length)
                 val harmonyVersion = subString.substring(0, subString.indexOf("("))
                 harmonyVersion
-            } catch (e: Exception) {
+            } catch (ignored: Exception) {
                 if (harmonyVersion.isEmpty()) {
                     "0.0.0"
                 } else {
@@ -57,6 +57,7 @@ object HarmonyUtil {
             }
         }
 
+    @Suppress("SameParameterValue")
     @SuppressLint("PrivateApi")
     private fun getProp(property: String, defaultValue: String): String {
         try {
@@ -68,8 +69,7 @@ object HarmonyUtil {
             }
 //      Log.i("HarmonyUtil", "当前设备是鸿蒙" + value + "系统")
             return value
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (ignored: Exception) {
         }
         return defaultValue
     }
@@ -86,8 +86,7 @@ object HarmonyUtil {
             if (context != null) {
                 result = 0 == Settings.Secure.getInt(context.contentResolver, "pure_mode_state", 0)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (ignored: Exception) {
         }
         return result
     }

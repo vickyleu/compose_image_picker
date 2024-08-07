@@ -84,9 +84,9 @@ import kotlinx.coroutines.withContext
             return null
         }
 
-        actual suspend  fun load(context: PlatformContext, requestType: RequestType): List<AssetInfo> {
+        actual suspend  fun load(context: PlatformContext, requestType: RequestType,onlyLast:Boolean): List<AssetInfo> {
             val assets = mutableListOf<AssetInfo>()
-            val cursor = createCursor(context, requestType)
+            val cursor = createCursor(context, requestType,onlyLast)
             val completer = CompletableDeferred<MutableList<AssetInfo>>()
             withContext(Dispatchers.IO){
                 cursor?.use {
@@ -116,7 +116,6 @@ import kotlinx.coroutines.withContext
                                     id
                                 )
                             }
-                        println("load: ${contentUri} ${it.getString(indexFilename)}")
                         assets.add(
                             AssetInfo(
                                 id = id.toString(),
@@ -139,7 +138,7 @@ import kotlinx.coroutines.withContext
             return assets
         }
 
-        private fun createCursor(context: PlatformContext, requestType: RequestType): Cursor? {
+        private fun createCursor(context: PlatformContext, requestType: RequestType,onlyLast:Boolean): Cursor? {
             val mediaType = MediaStore.Files.FileColumns.MEDIA_TYPE
             val image = MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
             val video = MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
@@ -160,17 +159,17 @@ import kotlinx.coroutines.withContext
                     arguments = listOf(video.toString())
                 )
             }
-            return createMediaCursor(context, selection)
+            return createMediaCursor(context, selection,onlyLast)
         }
 
-        private fun createMediaCursor(context: PlatformContext, selection: Selection): Cursor? {
+        private fun createMediaCursor(context: PlatformContext, selection: Selection,onlyLast:Boolean): Cursor? {
             return context.contentResolver.query(
-                MediaStore.Files.getContentUri("external"),
-                projection,
-                selection.selection,
-                selection.arguments.toTypedArray(),
-                "${MediaStore.Files.FileColumns.DATE_ADDED} DESC",
-                null
+                /* uri = */ MediaStore.Files.getContentUri("external"),
+                /* projection = */ projection,
+                /* selection = */ selection.selection,
+                /* selectionArgs = */ selection.arguments.toTypedArray(),
+                /* sortOrder = */ "${MediaStore.Files.FileColumns.DATE_ADDED} DESC ${if(onlyLast) "LIMIT 1" else ""}",
+                /*cancellationSignal=*/null
             )
         }
 

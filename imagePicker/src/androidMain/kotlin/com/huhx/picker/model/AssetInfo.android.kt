@@ -3,6 +3,8 @@ package com.huhx.picker.model
 import android.os.Build
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
+import coil3.Uri
+import coil3.toUri
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -97,4 +99,8 @@ actual class DateTimeFormatterKMP(private val formatter: Any) {
         return localDateTime.format(this)
     }
 
+}
+
+actual suspend fun AssetInfo.toUri(): Uri {
+    return this.filepath.toUri()
 }

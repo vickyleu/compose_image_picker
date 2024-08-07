@@ -11,11 +11,7 @@ import androidx.compose.runtime.setValue
 import coil3.Uri
 import coil3.toAndroidUri
 import com.huhx.picker.model.AssetInfo
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 
 actual class CameraLauncher(
@@ -23,6 +19,7 @@ actual class CameraLauncher(
     private val scope: CoroutineScope
 ) {
     private var cameraUri: Uri? by mutableStateOf(null)
+
     actual fun fetchCameraUri(assets: Map<String, List<AssetInfo>>): AssetInfo? {
         var assetInfo: AssetInfo? = null
         if (cameraUri != null) {
@@ -40,7 +37,7 @@ actual class CameraLauncher(
         return assetInfo
     }
 
-   actual val uri: Uri?
+    actual val uri: Uri?
         get() = cameraUri
 
     actual fun launch(uri: Uri?) {
@@ -51,8 +48,14 @@ actual class CameraLauncher(
 
 
 @Composable
-actual fun rememberCameraLauncher(scope: CoroutineScope, callback: CameraLauncher.(Boolean) -> Unit): CameraLauncher {
-    return rememberCameraLauncherForActivityResult(scope,ActivityResultContracts.TakePicture()) { success ->
+actual fun rememberCameraLauncher(
+    scope: CoroutineScope, onCreate: (CameraLauncher) -> Unit,
+    callback: CameraLauncher.(Boolean) -> Unit
+): CameraLauncher {
+    return rememberCameraLauncherForActivityResult(
+        scope,onCreate,
+        ActivityResultContracts.TakePicture()
+    ) { success ->
         callback(success)
     }
 }
@@ -60,17 +63,19 @@ actual fun rememberCameraLauncher(scope: CoroutineScope, callback: CameraLaunche
 @Composable
 private fun rememberCameraLauncherForActivityResult(
     scope: CoroutineScope,
+    onCreate: (CameraLauncher) -> Unit,
     action: ActivityResultContracts.TakePicture,
     callback: CameraLauncher.(Boolean) -> Unit
 ): CameraLauncher {
-    var cameraLauncher:CameraLauncher?=null
+    var cameraLauncher: CameraLauncher? = null
     val launcher = rememberLauncherForActivityResult(action) { success ->
-        val launcher = cameraLauncher?:return@rememberLauncherForActivityResult
-        callback(launcher,success)
+        val launcher = cameraLauncher ?: return@rememberLauncherForActivityResult
+        callback(launcher, success)
     }
     return remember {
-        CameraLauncher(launcher,scope).apply {
+        CameraLauncher(launcher, scope).apply {
             cameraLauncher = this
+            onCreate(this)
         }
     }
 }

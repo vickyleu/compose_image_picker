@@ -270,7 +270,6 @@ private fun AssetContent(
     padding: MutableState<Dp>
 ) {
     var assets by remember { mutableStateOf(viewModel.getGroupedAssets(requestType)) }
-    println("AssetContent: ${assets.size}")
     val context = LocalPlatformContext.current
     val gridCount = LocalAssetConfig.current.gridCount
     val maxAssets = LocalAssetConfig.current.maxAssets
@@ -507,4 +506,6 @@ expect class CameraLauncher {
 }
 
 @Composable
-expect fun rememberCameraLauncher(scope:CoroutineScope,callback: CameraLauncher.(Boolean) -> Unit): CameraLauncher
+expect fun rememberCameraLauncher(scope:CoroutineScope,
+                                  onCreate: (CameraLauncher) -> Unit = {},
+                                  callback: CameraLauncher.(Boolean) -> Unit): CameraLauncher

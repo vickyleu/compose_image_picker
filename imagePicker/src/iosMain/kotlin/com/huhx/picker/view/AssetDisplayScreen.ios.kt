@@ -10,8 +10,14 @@ import platform.UIKit.UIWindow
 
 actual class CameraLauncher(
     private val callback: CameraLauncher.(Boolean) -> Unit,
+    onCreate: (CameraLauncher) -> Unit,
     private val cameraController: IOSCameraController
 ) {
+
+    init {
+        onCreate(this)
+    }
+
     private var cameraUri: Uri? = null
     actual fun launch(uri: Uri?) {
         cameraController.startCamera {
@@ -41,6 +47,8 @@ actual class CameraLauncher(
 }
 
 @Composable
-actual fun rememberCameraLauncher(scope: CoroutineScope, callback: CameraLauncher.(Boolean) -> Unit): CameraLauncher {
-    return remember { CameraLauncher(callback,IOSCameraController(scope,(UIApplication.sharedApplication.windows.first() as UIWindow).rootViewController!!)) }
+actual fun rememberCameraLauncher(scope: CoroutineScope,
+                                  onCreate: (CameraLauncher) -> Unit,
+                                  callback: CameraLauncher.(Boolean) -> Unit): CameraLauncher {
+    return remember { CameraLauncher(callback,onCreate,IOSCameraController(scope,(UIApplication.sharedApplication.windows.first() as UIWindow).rootViewController!!)) }
 }

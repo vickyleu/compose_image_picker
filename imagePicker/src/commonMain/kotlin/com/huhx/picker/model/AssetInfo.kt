@@ -1,5 +1,6 @@
 package com.huhx.picker.model
 
+import coil3.Uri
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -88,3 +89,6 @@ open class AssetInfo(
         date = 0,
     )
 }
+
+
+expect suspend fun AssetInfo.toUri(): Uri
