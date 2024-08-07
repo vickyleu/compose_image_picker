@@ -35,7 +35,7 @@ actual abstract class AssetLoader {
             return NSURL(string = this.path!!)
         }
 
-        private val NSURL.uriString: String
+        internal val NSURL.uriString: String
             get() = (this.absoluteString ?: "")
 
         private fun generateTemporaryUri(): Uri {
@@ -66,9 +66,7 @@ actual abstract class AssetLoader {
             val fetchOptions = PHFetchOptions()
             val assets = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(assetUri), fetchOptions)
             val asset = assets.firstObject() as? PHAsset ?: return null
-
-            val fileName = (PHAssetResource.assetResourcesForAsset(asset)
-                .firstOrNull() as? PHAssetResource)?.originalFilename ?: ""
+            val fileName = asset.valueForKey("filename") as? String ?: ""
             val mimeType = "image/jpeg" // 根据需要设置MIME类型
             return AssetInfo(
                 id = asset.localIdentifier,

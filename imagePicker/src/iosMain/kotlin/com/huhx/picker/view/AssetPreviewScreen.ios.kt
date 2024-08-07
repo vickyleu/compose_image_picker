@@ -16,6 +16,8 @@ import coil3.fetch.SourceFetchResult
 import coil3.request.ImageRequest
 import coil3.request.Options
 import coil3.toUri
+import com.huhx.picker.model.AssetInfo
+import com.huhx.picker.provider.AssetLoader.Companion.uriString
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
@@ -37,6 +39,9 @@ import platform.Foundation.NSData
 import platform.Foundation.NSError
 import platform.Foundation.NSSelectorFromString
 import platform.Foundation.NSSortDescriptor
+import platform.Foundation.NSURL
+import platform.Foundation.timeIntervalSince1970
+import platform.Foundation.valueForKey
 import platform.Photos.PHAsset
 import platform.Photos.PHAssetMediaTypeImage
 import platform.Photos.PHFetchOptions
@@ -187,9 +192,9 @@ class IOSCameraController(
 ) : NSObject(),
     UIImagePickerControllerDelegateProtocol, UINavigationControllerDelegateProtocol {
 
-    private var onResult: ((Uri?) -> Unit)? = null
+    private var onResult: ((AssetInfo?) -> Unit)? = null
 
-    fun startCamera(onResult: (Uri?) -> Unit) {
+    fun startCamera(onResult: (AssetInfo?) -> Unit) {
         this.onResult = {
             onResult(it)
             this.onResult = null
@@ -240,8 +245,8 @@ class IOSCameraController(
             withContext(Dispatchers.IO) {
                 delay(300)
                 // 获取保存后的照片URL
-                fetchLastImageUri { uri ->
-                    onResult?.invoke(uri)
+                fetchLastImageUri { info ->
+                    onResult?.invoke(info)
                 }
             }
         }
@@ -271,7 +276,7 @@ class IOSCameraController(
         }
     }
 
-    private fun fetchLastImageUri(onComplete: (Uri?) -> Unit) {
+    private fun fetchLastImageUri(onComplete: (AssetInfo?) -> Unit) {
         val fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors =
             listOf(NSSortDescriptor(key = "creationDate", ascending = false))
@@ -281,8 +286,22 @@ class IOSCameraController(
 
         val asset = fetchResult.firstObject as? PHAsset
         asset?.let {
-            val uri = "phasset://${asset.localIdentifier}"
-            onComplete(uri.toUri())
+            val fileName = asset.valueForKey("filename") as? String ?: ""
+            val mimeType = "image/jpeg" // 根据需要设置MIME类型
+            val info = AssetInfo(
+                    id = asset.localIdentifier,
+                    uriString = NSURL(string = "phasset://${asset.localIdentifier}").uriString,
+                    filepath = "", // iOS上没有直接的文件路径
+                    filename = fileName,
+                    date = asset.creationDate?.timeIntervalSince1970?.toLong()
+                        ?.times(1000) ?: 0L,
+                    mediaType = asset.mediaType.toInt(),
+                    mimeType = mimeType,
+                    size = 0L, // 需要进一步实现获取文件大小
+                    duration = asset.duration.toLong(),
+                    directory = "Photo" // iOS上没有直接的文件目录
+                )
+            onComplete(info)
 //            val options = PHContentEditingInputRequestOptions()
 //            it.requestContentEditingInputWithOptions(options) { input, _ ->
 //                val uri = input?.fullSizeImageURL?.absoluteString?.toUri()

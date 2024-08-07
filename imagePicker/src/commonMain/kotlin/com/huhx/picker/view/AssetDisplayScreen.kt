@@ -290,8 +290,8 @@ private fun AssetContent(
     }
     val scope = rememberCoroutineScope()
 
-    val cameraLauncher = rememberCameraLauncher(scope) { success ->
-        if (success) {
+    val cameraLauncher = rememberCameraLauncher(scope) { info ->
+        if (info!=null) {
             scope.launch { viewModel.initDirectories() }
         } else {
             scope.launch { viewModel.deleteImage(this@rememberCameraLauncher.uri) }
@@ -302,13 +302,13 @@ private fun AssetContent(
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.assets.size }
             .distinctUntilChanged()
-            .filter { it>0 }
+            .filter { it > 0 }
             .distinctUntilChanged()
             .collect {
                 scope.launch {
                     withContext(Dispatchers.IO) {
                         val a = viewModel.getGroupedAssets(requestType)
-                        if(a.isNotEmpty()){
+                        if (a.isNotEmpty()) {
                             cameraLauncher.fetchCameraUri(a)?.let {
                                 viewModel.selectedList.add(it)
                             }
@@ -506,6 +506,8 @@ expect class CameraLauncher {
 }
 
 @Composable
-expect fun rememberCameraLauncher(scope:CoroutineScope,
-                                  onCreate: (CameraLauncher) -> Unit = {},
-                                  callback: CameraLauncher.(Boolean) -> Unit): CameraLauncher
+expect fun rememberCameraLauncher(
+    scope: CoroutineScope,
+    onCreate: (CameraLauncher) -> Unit = {},
+    callback: CameraLauncher.(AssetInfo?) -> Unit
+): CameraLauncher

@@ -9,9 +9,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import coil3.Uri
+import coil3.compose.LocalPlatformContext
 import coil3.toAndroidUri
 import com.huhx.picker.model.AssetInfo
+import com.huhx.picker.provider.AssetLoader
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 
 actual class CameraLauncher(
@@ -50,10 +53,10 @@ actual class CameraLauncher(
 @Composable
 actual fun rememberCameraLauncher(
     scope: CoroutineScope, onCreate: (CameraLauncher) -> Unit,
-    callback: CameraLauncher.(Boolean) -> Unit
+    callback: CameraLauncher.(AssetInfo?) -> Unit
 ): CameraLauncher {
     return rememberCameraLauncherForActivityResult(
-        scope,onCreate,
+        scope, onCreate,
         ActivityResultContracts.TakePicture()
     ) { success ->
         callback(success)
@@ -65,12 +68,26 @@ private fun rememberCameraLauncherForActivityResult(
     scope: CoroutineScope,
     onCreate: (CameraLauncher) -> Unit,
     action: ActivityResultContracts.TakePicture,
-    callback: CameraLauncher.(Boolean) -> Unit
+    callback: CameraLauncher.(AssetInfo?) -> Unit
 ): CameraLauncher {
     var cameraLauncher: CameraLauncher? = null
+    val context = LocalPlatformContext.current
     val launcher = rememberLauncherForActivityResult(action) { success ->
         val launcher = cameraLauncher ?: return@rememberLauncherForActivityResult
-        callback(launcher, success)
+        if (success) {
+            scope.launch {
+                val info = AssetLoader.load(
+                    context,
+                    com.huhx.picker.model.RequestType.IMAGE,
+                    onlyLast = true
+                ).firstOrNull()?.let {
+                    if(it.uriString == launcher.uri?.path.toString()) it else null
+                }
+                callback(launcher, info)
+            }
+        } else {
+            callback(launcher, null)
+        }
     }
     return remember {
         CameraLauncher(launcher, scope).apply {
