@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
 import cafe.adriel.voyager.navigator.internal.BackHandler
+import coil3.PlatformContext
 import coil3.Uri
 import coil3.compose.LocalPlatformContext
 import com.huhx.picker.component.AssetImageItem
@@ -291,7 +292,7 @@ private fun AssetContent(
     val scope = rememberCoroutineScope()
 
     val cameraLauncher = rememberCameraLauncher(scope) { info ->
-        if (info!=null) {
+        if (info != null) {
             scope.launch { viewModel.initDirectories() }
         } else {
             scope.launch { viewModel.deleteImage(this@rememberCameraLauncher.uri) }
@@ -334,7 +335,7 @@ private fun AssetContent(
         }.toTypedArray()))
     }
 
-    val impl = LocalStoragePermission.current
+    val impl = LocalStoragePermission.current.value
         ?: throw IllegalStateException("LocalStoragePermission not found")
     var cameraPermission by remember { mutableStateOf(false) }
     var cameraPermissionRequested by remember { mutableStateOf(false) }
@@ -375,7 +376,7 @@ private fun AssetContent(
                                 if (cameraPermission.not()) {
                                     withContext(Dispatchers.IO) {
                                         if (cameraPermission) {
-                                            cameraLauncher.launch(viewModel.getUri())
+                                            cameraLauncher.launch(context, viewModel.getUri())
                                             return@withContext
                                         }
                                         if (cameraPermissionRequested) {
@@ -387,7 +388,10 @@ private fun AssetContent(
                                             onGranted = {
                                                 cameraPermission = true
                                                 scope.launch {
-                                                    cameraLauncher.launch(viewModel.getUri())
+                                                    cameraLauncher.launch(
+                                                        context,
+                                                        viewModel.getUri()
+                                                    )
                                                 }
                                             },
                                             onDenied = {
@@ -398,7 +402,7 @@ private fun AssetContent(
                                     }
                                     return@launch
                                 } else {
-                                    cameraLauncher.launch(viewModel.getUri())
+                                    cameraLauncher.launch(context, viewModel.getUri())
                                 }
                             }
                         },
@@ -500,7 +504,7 @@ private fun AssetImage(
 }
 
 expect class CameraLauncher {
-    fun launch(uri: Uri?)
+    fun launch(context: PlatformContext, uri: Uri?)
     fun fetchCameraUri(assets: Map<String, List<AssetInfo>>): AssetInfo?
     val uri: Uri?
 }

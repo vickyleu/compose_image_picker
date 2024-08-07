@@ -1,5 +1,6 @@
 package com.huhx.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -21,24 +23,32 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
-import com.huhx.picker.component.AssetImageItem
+import cafe.adriel.voyager.navigator.Navigator
+import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
+import cafe.adriel.voyager.transitions.SlideTransition
 import com.huhx.app.data.MomentModelFactory
 import com.huhx.app.data.MomentRepository
 import com.huhx.app.data.MomentViewModel
+import com.huhx.app.ui.theme.Compose_image_pickerTheme
+import com.huhx.app.view.CameraLaunchScreen
+import com.huhx.app.view.CameraLaunchViewModel
+import com.huhx.app.view.LocalNavigatorController
+import com.huhx.picker.component.AssetImageItem
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.AssetResourceType
-import com.huhx.app.ui.theme.Compose_image_pickerTheme
 import com.huhx.picker.util.LocalStoragePermission
 import com.huhx.picker.util.StoragePermissionUtil
 import com.huhx.picker.view.AssetImageIndicator
@@ -46,23 +56,68 @@ import com.huhx.picker.view.SelectorBottomBar
 import kotlinx.coroutines.MainScope
 
 class MainActivity : ComponentActivity() {
-
+    private val impl: MutableState<StoragePermissionUtil?> = mutableStateOf(null)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val impl = StoragePermissionUtil(this,lifecycle, MainScope())
+
+        activityResultRegistry.apply {
+            println("cameraLauncher 完蛋了??  ${this.hashCode()}")
+        }
+        if (impl.value == null) {
+            impl.value = StoragePermissionUtil(this, lifecycle, MainScope())
+            println("cameraLauncher 完蛋了??")
+        }
         setContent {
             CompositionLocalProvider(LocalStoragePermission provides impl) {
+                println("cameraLauncher 完蛋了?? LocalStoragePermission")
                 Compose_image_pickerTheme {
                     val navController = rememberNavController()
                     val viewModel: MomentViewModel = viewModel(
                         factory = MomentModelFactory(momentRepository = MomentRepository())
                     )
-                    AppRoute(navController = navController, viewModel = viewModel)
+                    if (true) {
+                        println("cameraLauncher 完蛋了?? CameraLaunchViewModel==>>")
+                        val startScreen = remember {
+                            println("cameraLauncher 完蛋了?? CameraLaunchViewModel==>> 不走??? ")
+                            CameraLaunchScreen(CameraLaunchViewModel())
+                        }
+                        Navigator(
+                            screen = startScreen,
+                            disposeBehavior = NavigatorDisposeBehavior(
+                                disposeNestedNavigators = false,
+                                disposeSteps = false
+                            ),
+                            onBackPressed = { currentScreen ->
+                                false
+                            }
+                        ) {
+                            CompositionLocalProvider(LocalNavigatorController provides it) {
+                                SlideTransition(
+                                    it, modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.White)
+                                )
+                            }
+                        }
+                    } else {
+                        AppRoute(navController = navController, viewModel = viewModel)
+                    }
                 }
             }
         }
     }
+
+    @Deprecated("Deprecated in Java", ReplaceWith(
+        "super.onActivityResult(requestCode, resultCode, data)",
+        "androidx.activity.ComponentActivity"
+    )
+    )
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        println("cameraLauncher 完蛋了?? onActivityResult resultCode:$resultCode")
+    }
+
 }
 
 @Composable
@@ -131,7 +186,11 @@ fun AssetImageItemPreview2() {
                     assetSelected = list
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(text = stringResource(R.string.text_asset_select), color = Color.White, fontSize = 14.sp)
+                Text(
+                    text = stringResource(R.string.text_asset_select),
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
             }
             Button(
                 modifier = Modifier.defaultMinSize(minHeight = 1.dp, minWidth = 1.dp),

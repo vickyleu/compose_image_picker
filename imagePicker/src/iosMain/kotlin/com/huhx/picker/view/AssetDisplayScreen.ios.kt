@@ -2,6 +2,7 @@ package com.huhx.picker.view
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import coil3.PlatformContext
 import coil3.Uri
 import coil3.toUri
 import com.huhx.picker.model.AssetInfo
@@ -20,7 +21,7 @@ actual class CameraLauncher(
     }
 
     private var assetInfo: AssetInfo? = null
-    actual fun launch(uri: Uri?) {
+    actual fun launch(context: PlatformContext, uri: Uri?) {
         cameraController.startCamera {
             assetInfo = it
             callback(it)

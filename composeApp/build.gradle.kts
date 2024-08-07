@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.parcelize)
 }
 
 kotlin {
@@ -45,6 +46,13 @@ kotlin {
             implementation(libs.navigation.compose)
 
             implementation(projects.imagePicker)
+
+            implementation(libs.voyager.navigator)
+            implementation(libs.voyager.screenmodel)
+            implementation(libs.voyager.navigator.bottomsheet)
+            implementation(libs.voyager.navigator.tab)
+            implementation(libs.voyager.transitions)
+
         }
     }
 }

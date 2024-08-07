@@ -43,7 +43,7 @@ fun PickerPermissions(content: @Composable () -> Unit) {
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
     var permissionsGranted by rememberSaveable { mutableStateOf(false) }
     val lifecycle = LocalLifecycleOwner.current
-    val storagePermissionUtil = LocalStoragePermission.current?:throw IllegalStateException("LocalStoragePermission not found")
+    val storagePermissionUtil = LocalStoragePermission.current.value?:throw IllegalStateException("LocalStoragePermission not found")
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             permissionsGranted = storagePermissionUtil.checkStoragePermission()

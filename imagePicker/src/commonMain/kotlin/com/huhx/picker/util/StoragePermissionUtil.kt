@@ -1,15 +1,18 @@
 package com.huhx.picker.util
 
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.lifecycle.Lifecycle
 import coil3.PlatformContext
 import kotlinx.coroutines.CoroutineScope
 
 
-val LocalStoragePermission = compositionLocalOf<StoragePermissionUtil?> {
-    null
+val LocalStoragePermission = compositionLocalOf<MutableState<StoragePermissionUtil?>> {
+    mutableStateOf(null)
 }
+
 
 
 expect class StoragePermissionUtil(
