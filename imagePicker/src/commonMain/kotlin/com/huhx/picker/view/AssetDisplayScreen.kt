@@ -126,7 +126,6 @@ internal fun AssetDisplayScreen(
     with(LocalDensity.current) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            contentWindowInsets = WindowInsets.waterfall,
             containerColor = Color.Black,
             topBar = {
                 DisplayTopAppBar(
@@ -175,7 +174,8 @@ private fun Density.DisplayTopAppBar(
                         initialTopBarHeight.value = height
                     }
                 }
-                .padding(top = WindowInsets.statusBars.getTop(this).toDp()),
+//                .padding(top = WindowInsets.statusBars.getTop(this).toDp())
+            ,
             navigationIcon = {
                 Box(
                     modifier = Modifier.size(48.dp)
@@ -335,8 +335,7 @@ private fun AssetContent(
         }.toTypedArray()))
     }
 
-    val impl = LocalStoragePermission.current.value
-        ?: throw IllegalStateException("LocalStoragePermission not found")
+    val impl = LocalStoragePermission.current ?: throw IllegalStateException("LocalStoragePermission not found")
     var cameraPermission by remember { mutableStateOf(false) }
     var cameraPermissionRequested by remember { mutableStateOf(false) }
 

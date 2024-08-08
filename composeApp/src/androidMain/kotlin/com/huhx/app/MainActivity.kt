@@ -56,30 +56,22 @@ import com.huhx.picker.view.SelectorBottomBar
 import kotlinx.coroutines.MainScope
 
 class MainActivity : ComponentActivity() {
-    private val impl: MutableState<StoragePermissionUtil?> = mutableStateOf(null)
+    private var impl: StoragePermissionUtil? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        activityResultRegistry.apply {
-            println("cameraLauncher 完蛋了??  ${this.hashCode()}")
-        }
-        if (impl.value == null) {
-            impl.value = StoragePermissionUtil(this, lifecycle, MainScope())
-            println("cameraLauncher 完蛋了??")
+        if (impl == null) {
+            impl = StoragePermissionUtil(this, lifecycle, MainScope())
         }
         setContent {
             CompositionLocalProvider(LocalStoragePermission provides impl) {
-                println("cameraLauncher 完蛋了?? LocalStoragePermission")
                 Compose_image_pickerTheme {
                     val navController = rememberNavController()
                     val viewModel: MomentViewModel = viewModel(
                         factory = MomentModelFactory(momentRepository = MomentRepository())
                     )
-                    if (true) {
-                        println("cameraLauncher 完蛋了?? CameraLaunchViewModel==>>")
+                    if (false) {
                         val startScreen = remember {
-                            println("cameraLauncher 完蛋了?? CameraLaunchViewModel==>> 不走??? ")
                             CameraLaunchScreen(CameraLaunchViewModel())
                         }
                         Navigator(
@@ -108,15 +100,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Deprecated("Deprecated in Java", ReplaceWith(
-        "super.onActivityResult(requestCode, resultCode, data)",
-        "androidx.activity.ComponentActivity"
-    )
-    )
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        println("cameraLauncher 完蛋了?? onActivityResult resultCode:$resultCode")
-    }
 
 }
 

@@ -19,18 +19,6 @@ data class TitleInfo(
 
 abstract class BasicViewModel : ScreenModel{
 
-    open val topBarColor: Color
-        get() = Color.White
-
-    open val showingTitle: Boolean
-        get() = true
-
-    open val naviBarColor: Color
-        get() = Color.White
-
-    open val hasTopBar: Boolean
-        get() = true
-
     private val isFirstLoading = mutableStateOf(true)
 
 
@@ -42,12 +30,6 @@ abstract class BasicViewModel : ScreenModel{
         return false
     }
 
-    val titleInfo = mutableStateOf(
-        TitleInfo(
-            Offset.Unspecified,
-            TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        )
-    )
 
     open suspend fun backCallBack(): Boolean {
         return true
@@ -81,22 +63,3 @@ abstract class BasicViewModel : ScreenModel{
 
 }
 
-
-abstract class BasicTabViewModel : BasicViewModel() {
-    override val hasTopBar: Boolean
-        get() = false
-    override val topBarColor: Color
-        get() = Color.Transparent
-    override val showingTitle: Boolean
-        get() = false
-
-}
-
-abstract class BasicStatelessViewModel : BasicViewModel() {
-    override val hasTopBar: Boolean
-        get() = false
-    override val topBarColor: Color
-        get() = Color.Transparent
-    override val showingTitle: Boolean
-        get() = false
-}

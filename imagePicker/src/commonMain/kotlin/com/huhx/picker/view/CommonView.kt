@@ -5,12 +5,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeightIn
+import androidx.compose.foundation.layout.requiredSizeIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -80,51 +84,44 @@ fun AssetImageIndicator(
         Pair(BorderStroke(width = 1.dp, color = Color.White), Color.Black.copy(alpha = 0.3F))
     }
 
-    var measureHeight by remember { mutableStateOf(0.dp) }
     with(LocalDensity.current){
-        Box(
-            modifier = Modifier
-                .padding(6.dp)
-                .height(measureHeight)
-                .let {
-                    if(measureHeight==0.dp){
-                        it.heightIn(min = 3.dp, max = 3.dp)
-                    }else it.heightIn(min = measureHeight, max = measureHeight*2)
-                }
-                .aspectRatio(1f)
-                .then(if (border == null) Modifier else Modifier.border(border, shape = CircleShape))
-                .background(color = color, shape = CircleShape)
-                .clickable {
-                    val isSelected = !selected
-                    if (onClicks != null) {
-                        onClicks(isSelected)
-                        return@clickable
-                    }
-                    if (assetSelected.size == maxAssets && isSelected) {
-                        showToast(context, errorMessage)
-
-                        return@clickable
-                    }
-                    if (isSelected) assetSelected.add(assetInfo) else assetSelected.remove(assetInfo)
-                }
-                .clip(CircleShape)
-            ,
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
+        BoxWithConstraints ( modifier = Modifier
+            .padding(6.dp)
+            .wrapContentHeight()
+        ){
+            Box(
                 modifier = Modifier
-                    .align(Alignment.Center)
-                    .wrapContentSize()
-                    .onGloballyPositioned {
-                        measureHeight = it.size.height.toDp()
+                    .size(20.dp)
+                    .then(if (border == null) Modifier else Modifier.border(border, shape = CircleShape))
+                    .background(color = color, shape = CircleShape)
+                    .clickable {
+                        val isSelected = !selected
+                        if (onClicks != null) {
+                            onClicks(isSelected)
+                            return@clickable
+                        }
+                        if (assetSelected.size == maxAssets && isSelected) {
+                            showToast(context, errorMessage)
+
+                            return@clickable
+                        }
+                        if (isSelected) assetSelected.add(assetInfo) else assetSelected.remove(assetInfo)
                     }
+                    .clip(CircleShape)
                 ,
-                textAlign = TextAlign.Center,
-                text = if (selected)"${assetSelected.indexOf(assetInfo) + 1}" else "",
-                color = Color.White,
-                fontSize = fontSize,
-            )
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    modifier = Modifier.fillMaxSize(),
+                    textAlign = TextAlign.Center,
+                    text = if (selected)"${assetSelected.indexOf(assetInfo) + 1}" else "",
+                    color = Color.White,
+                    fontSize = fontSize,
+                    lineHeight = (fontSize.roundToPx()*1.5f).toDp().value.sp
+                )
+            }
         }
+
     }
 }
 

@@ -33,8 +33,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class CameraLaunchViewModel : BasicViewModel() {
-    override val showingTitle: Boolean
-        get() = false
 }
 
 class CameraLaunchScreen(
@@ -52,42 +50,40 @@ class CameraLaunchScreen(
             val lifecycle = LocalLifecycleOwner.current
 
             val scope = rememberCoroutineScope()
-            permissionHandle {
-                println("model.cameraLauncher::")
-                val state = lifecycle.lifecycle.currentStateFlow.collectAsState()
-                val cameraLauncher = rememberCameraLauncher(scope, onCreate = {
-                    println("cameraLauncher onCreate")
-                }) { info ->
-                    println("this@rememberCameraLauncher.uri::${this@rememberCameraLauncher.uri} info:$info")
-                    if (info!=null) {
-                        scope.launch {
-                            info.toUri().path?.let {
-                                /*val buffer = ByteArray(info.size.toInt())
-                                FileImpl(it).inputStream().useImpl {
-                                    it.read(buffer)
-                                }
-                                navigator.pop()*/
-//                                ${buffer.size}
-                                println("bytesRead:  ${it} ")
-//                                model.callback(listOf(buffer))
-                            }?:run{
-                                navigator.pop()
+            val cameraLauncher = rememberCameraLauncher(scope, onCreate = {
+                println("cameraLauncher onCreate")
+            }) { info ->
+                if (info!=null) {
+                    scope.launch {
+                        info.toUri().path?.let {
+                            /*val buffer = ByteArray(info.size.toInt())
+                            FileImpl(it).inputStream().useImpl {
+                                it.read(buffer)
                             }
-                        }
-                    } else {
-                        scope.launch {
+                            navigator.pop()*/
+//                                ${buffer.size}
+                            println("bytesRead:  ${it} ")
+//                                model.callback(listOf(buffer))
+                        }?:run{
                             navigator.pop()
                         }
                     }
+                } else {
+                    scope.launch {
+                        navigator.pop()
+                    }
                 }
-                val impl = LocalStoragePermission.current.value!!
+            }
+            permissionHandle {
+                val state = lifecycle.lifecycle.currentStateFlow.collectAsState()
+                val impl = LocalStoragePermission.current!!
+                var cameraIsLaunch by remember { mutableStateOf(false) }
                 var cameraPermission by remember { mutableStateOf(false) }
                 var cameraPermissionRequested by remember { mutableStateOf(false) }
                 LaunchedEffect(Unit) {
                     cameraPermission = impl.checkCameraPermission()
                 }
                 val context = LocalPlatformContext.current
-                println("model.cameraLauncher::permissionHandle ${state.value}")
                 scope.launch {
                     suspend fun getUri(): Uri?{
                         return AssetLoader.insertImage(context)
@@ -117,6 +113,10 @@ class CameraLaunchScreen(
                         }
                         return@launch
                     } else {
+                        if(cameraIsLaunch){
+                            return@launch
+                        }
+                        cameraIsLaunch = true
                         cameraLauncher.launch(context,getUri())
                     }
                 }

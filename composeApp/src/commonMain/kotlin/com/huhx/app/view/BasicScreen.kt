@@ -42,13 +42,13 @@ import kotlin.jvm.Transient
 
 expect interface BasicScreenSerializer
 
-expect abstract class TabImpl() : Tab
+expect interface  TabImpl : Tab
 
 @OptIn(ExperimentalVoyagerApi::class)
 abstract class BasicScreen<T : BasicViewModel>(
     @Transient private val create: () -> T,
     @Transient private val screenDepth: T.(screen: BasicScreen<T>) -> Int = { 0 },
-) : TabImpl(), BasicScreenSerializer, ScreenTransition {
+) : TabImpl, BasicScreenSerializer, ScreenTransition {
 
     @delegate:Transient
     internal val model: T by lazy {
@@ -102,11 +102,6 @@ abstract class BasicScreen<T : BasicViewModel>(
                 modifier = Modifier.fillMaxSize().background(Color.Transparent),
                 contentColor = Color.Transparent,
                 containerColor = rootColor,
-                topBar = {
-                    if (screenModel.hasTopBar) {
-                        modelTopBar(screenModel as T, navigator, topAppBarHeightAssign)
-                    }
-                },
                 content = {
                     val tabbarHeight = topAppBarHeightAssign.value
                     BoxWithConstraints(
@@ -133,25 +128,6 @@ abstract class BasicScreen<T : BasicViewModel>(
         @Composable
         get() = TabOptions(index = 0u, title = "${this::class.simpleName}")
 
-
-    @Composable
-    private fun actionsRowScope(model: T, scope: RowScope) {
-        scope.actions(model, navigator)
-    }
-
-    @Composable
-    open fun RowScope.actions(model: T, navigator: Navigator) {
-
-    }
-
-    @Composable
-    open fun modelTopBar(
-        model: T,
-        navigator: Navigator,
-        topAppBarHeightAssign: MutableState<Dp>
-    ) {
-
-    }
 
     internal open fun forceShowingBack(): Boolean {
         return false

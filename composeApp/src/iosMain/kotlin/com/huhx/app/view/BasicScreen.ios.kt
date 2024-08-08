@@ -2,6 +2,11 @@ package com.huhx.app.view
 
 import cafe.adriel.voyager.navigator.tab.Tab
 
+@Suppress("unused")
 actual interface BasicScreenSerializer
-actual abstract class TabImpl actual constructor() : Tab
-actual annotation class ParcelizeImpl actual constructor()
+
+@Suppress("unused")
+actual interface TabImpl : Tab
+
+@Suppress("unused")
+actual annotation class ParcelizeImpl actual constructor() {}
