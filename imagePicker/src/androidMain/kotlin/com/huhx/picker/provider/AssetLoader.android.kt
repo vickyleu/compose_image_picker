@@ -2,7 +2,9 @@ package com.huhx.picker.provider
 
 import android.content.ContentUris
 import android.content.ContentValues
+import android.content.Context
 import android.database.Cursor
+import android.database.MatrixCursor
 import android.provider.MediaStore
 import androidx.core.database.getStringOrNull
 import coil3.PlatformContext
@@ -162,16 +164,35 @@ import kotlinx.coroutines.withContext
             return createMediaCursor(context, selection,onlyLast)
         }
 
-        private fun createMediaCursor(context: PlatformContext, selection: Selection,onlyLast:Boolean): Cursor? {
-            return context.contentResolver.query(
+        private fun createMediaCursor(context: Context, selection: Selection, onlyLast: Boolean): Cursor? {
+            val cursor = context.contentResolver.query(
                 /* uri = */ MediaStore.Files.getContentUri("external"),
                 /* projection = */ projection,
                 /* selection = */ selection.selection,
                 /* selectionArgs = */ selection.arguments.toTypedArray(),
-                /* sortOrder = */ "${MediaStore.Files.FileColumns.DATE_ADDED} DESC ${if(onlyLast) "LIMIT 1" else ""}",
-                /*cancellationSignal=*/null
+                /* sortOrder = */ "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
             )
+            return if (cursor != null && onlyLast) {
+                // 如果只需要最新的一条记录
+                MatrixCursor(cursor.columnNames).apply {
+                    if (cursor.moveToFirst()) {
+                        addRow((0 until cursor.columnCount).map { cursor.getString(it) }.toTypedArray())
+                    }
+                }
+            } else {
+                cursor
+            }
         }
+        /*private fun createMediaCursor(context: PlatformContext, selection: Selection,onlyLast:Boolean): Cursor? {
+            return context.contentResolver.query(
+                *//* uri = *//* MediaStore.Files.getContentUri("external"),
+                *//* projection = *//* projection,
+                *//* selection = *//* selection.selection,
+                *//* selectionArgs = *//* selection.arguments.toTypedArray(),
+                *//* sortOrder = *//* "${MediaStore.Files.FileColumns.DATE_ADDED} DESC ${if(onlyLast) "LIMIT 1" else ""}",
+                *//*cancellationSignal=*//*null
+            )
+        }*/
 
         private data class Selection(val selection: String, val arguments: List<String>)
 
