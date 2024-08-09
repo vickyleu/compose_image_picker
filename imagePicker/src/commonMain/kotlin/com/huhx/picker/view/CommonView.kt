@@ -45,7 +45,7 @@ import coil3.compose.LocalPlatformContext
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.AssetPickerConfig
 import compose_image_picker.imagepicker.generated.resources.Res
-import compose_image_picker.imagepicker.generated.resources.message_selected_exceed
+//import compose_image_picker.imagepicker.generated.resources.message_selected_exceed
 import compose_image_picker.imagepicker.generated.resources.text_select_button
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
@@ -76,7 +76,8 @@ fun AssetImageIndicator(
 ) {
     val context = LocalPlatformContext.current
     val maxAssets = LocalAssetConfig.current.maxAssets
-    val errorMessage = stringResource(Res.string.message_selected_exceed, maxAssets)
+    val errorMessage = "你最多只能选择${maxAssets}个图片"
+//    val errorMessage = stringResource(Res.string.message_selected_exceed, maxAssets)
 
     val (border, color) = if (selected) {
         Pair(null, Color(64, 151, 246))

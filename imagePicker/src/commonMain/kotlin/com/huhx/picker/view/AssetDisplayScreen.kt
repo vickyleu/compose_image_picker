@@ -77,7 +77,7 @@ import com.huhx.picker.viewmodel.AssetViewModel
 import compose_image_picker.imagepicker.generated.resources.Res
 import compose_image_picker.imagepicker.generated.resources.icon_back
 import compose_image_picker.imagepicker.generated.resources.icon_camera
-import compose_image_picker.imagepicker.generated.resources.message_selected_exceed
+//import compose_image_picker.imagepicker.generated.resources.message_selected_exceed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -274,7 +274,7 @@ private fun AssetContent(
     val context = LocalPlatformContext.current
     val gridCount = LocalAssetConfig.current.gridCount
     val maxAssets = LocalAssetConfig.current.maxAssets
-    val errorMessage = stringResource(Res.string.message_selected_exceed, maxAssets)
+    val errorMessage = "你最多只能选择${maxAssets}个图片" //stringResource(Res.string.message_selected_exceed, maxAssets)
     val gridState = rememberSaveable(assets, saver = LazyGridState.Saver) {
         LazyGridState()
     }
@@ -434,7 +434,7 @@ private fun AssetImage(
     val maxAssets = LocalAssetConfig.current.maxAssets
 
     if (assetInfo is AssetInfo.Camera) {
-        val errorMessage = stringResource(Res.string.message_selected_exceed, maxAssets)
+        val errorMessage = "你最多只能选择${maxAssets}个图片"//stringResource(Res.string.message_selected_exceed, maxAssets)
         Box(
             modifier = modifier.fillMaxSize()
                 .background(Color.Black)
@@ -463,7 +463,7 @@ private fun AssetImage(
 
         return
     } else {
-        val errorMessage = stringResource(Res.string.message_selected_exceed, maxAssets)
+        val errorMessage = "你最多只能选择${maxAssets}个图片"//stringResource(Res.string.message_selected_exceed, maxAssets)
         val selected =
             remember(assetInfo.id) { mutableStateOf(selectedList.any { it.id == assetInfo.id }) }
         LaunchedEffect(Unit) {
