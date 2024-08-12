@@ -1,5 +1,11 @@
 package com.huhx.picker.model
 
+import coil3.Uri
+import coil3.toUri
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toNSDateComponents
 import platform.Foundation.NSCalendar
@@ -12,8 +18,11 @@ import platform.Foundation.NSCalendarUnitYear
 import platform.Foundation.NSDateComponents
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSLocale
+import platform.Photos.PHAsset
 import platform.Photos.PHAssetMediaTypeImage
 import platform.Photos.PHAssetMediaTypeVideo
+import platform.Photos.PHContentEditingInputRequestOptions
+import platform.Photos.requestContentEditingInputWithOptions
 
 actual class MediaStoreKMP {
     actual object Files {
@@ -93,4 +102,28 @@ actual class DateTimeFormatterKMP(private val formatter: NSDateFormatter) {
     }
 
 
+}
+
+actual suspend fun AssetInfo.toUri(): Uri {
+    val uriStr = this.uriString
+    val completer = CompletableDeferred<String>()
+    withContext(Dispatchers.IO) {
+        if (uriStr.startsWith("phasset://")) {
+            val localIdentifier = uriStr.substring("phasset://".length)
+            val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(localIdentifier), null)
+            val asset = fetchResult.firstObject() as? PHAsset ?: return@withContext run {
+                completer.complete(uriStr)
+            }
+            asset.requestContentEditingInputWithOptions(options = PHContentEditingInputRequestOptions.new()) {
+                    contentEditingInput, info ->
+                val imageURL = contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
+                println("imageURL: $imageURL")
+                completer.complete(imageURL)
+            }
+        }else{
+            completer.complete(uriStr)
+        }
+    }
+    val imageURL = completer.await()
+    return imageURL.toUri()
 }

@@ -34,10 +34,6 @@ fun AssetPicker(
             navController = navController
         )
     )
-
-    println("viewModel:::${viewModel.hashCode()}")
-
-
     val isLoading = remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {

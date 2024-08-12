@@ -10,6 +10,6 @@ expect abstract class AssetLoader {
         suspend fun insertImage(context: PlatformContext): Uri?
         suspend fun deleteByUri(context: PlatformContext, uri: Uri)
         suspend fun findByUri(context: PlatformContext, uri: Uri): AssetInfo?
-        suspend fun load(context: PlatformContext, requestType: RequestType): List<AssetInfo>
+        suspend fun load(context: PlatformContext, requestType: RequestType,onlyLast:Boolean=false): List<AssetInfo>
     }
 }

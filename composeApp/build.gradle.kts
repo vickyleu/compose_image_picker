@@ -1,11 +1,26 @@
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.parcelize)
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs = listOf(
+            "-Xexpect-actual-classes", // remove warnings for expect classes
+            "-Xskip-prerelease-check",
+            "-opt-in=kotlinx.cinterop.BetaInteropApi",
+            "-opt-in=kotlinx.cinterop.ExperimentalForeignApi",
+            "-opt-in=kotlinx.cinterop.ExperimentalForeignApi",
+            "-opt-in=org.jetbrains.compose.resources.InternalResourceApi",
+        )
+    }
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(libs.versions.jvmTarget.get()))
     }
@@ -45,6 +60,13 @@ kotlin {
             implementation(libs.navigation.compose)
 
             implementation(projects.imagePicker)
+
+            implementation(libs.voyager.navigator)
+            implementation(libs.voyager.screenmodel)
+            implementation(libs.voyager.navigator.bottomsheet)
+            implementation(libs.voyager.navigator.tab)
+            implementation(libs.voyager.transitions)
+
         }
     }
 }

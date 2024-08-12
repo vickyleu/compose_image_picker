@@ -47,7 +47,7 @@ accompanist-permissions = { group = "com.google.accompanist", name = "accompanis
 
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
-
+kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

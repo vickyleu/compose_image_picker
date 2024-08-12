@@ -2,7 +2,9 @@ package com.huhx.picker.provider
 
 import android.content.ContentUris
 import android.content.ContentValues
+import android.content.Context
 import android.database.Cursor
+import android.database.MatrixCursor
 import android.provider.MediaStore
 import androidx.core.database.getStringOrNull
 import coil3.PlatformContext
@@ -84,9 +86,9 @@ import kotlinx.coroutines.withContext
             return null
         }
 
-        actual suspend  fun load(context: PlatformContext, requestType: RequestType): List<AssetInfo> {
+        actual suspend  fun load(context: PlatformContext, requestType: RequestType,onlyLast:Boolean): List<AssetInfo> {
             val assets = mutableListOf<AssetInfo>()
-            val cursor = createCursor(context, requestType)
+            val cursor = createCursor(context, requestType,onlyLast)
             val completer = CompletableDeferred<MutableList<AssetInfo>>()
             withContext(Dispatchers.IO){
                 cursor?.use {
@@ -116,7 +118,6 @@ import kotlinx.coroutines.withContext
                                     id
                                 )
                             }
-                        println("load: ${contentUri} ${it.getString(indexFilename)}")
                         assets.add(
                             AssetInfo(
                                 id = id.toString(),
@@ -139,7 +140,7 @@ import kotlinx.coroutines.withContext
             return assets
         }
 
-        private fun createCursor(context: PlatformContext, requestType: RequestType): Cursor? {
+        private fun createCursor(context: PlatformContext, requestType: RequestType,onlyLast:Boolean): Cursor? {
             val mediaType = MediaStore.Files.FileColumns.MEDIA_TYPE
             val image = MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
             val video = MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
@@ -160,19 +161,38 @@ import kotlinx.coroutines.withContext
                     arguments = listOf(video.toString())
                 )
             }
-            return createMediaCursor(context, selection)
+            return createMediaCursor(context, selection,onlyLast)
         }
 
-        private fun createMediaCursor(context: PlatformContext, selection: Selection): Cursor? {
-            return context.contentResolver.query(
-                MediaStore.Files.getContentUri("external"),
-                projection,
-                selection.selection,
-                selection.arguments.toTypedArray(),
-                "${MediaStore.Files.FileColumns.DATE_ADDED} DESC",
-                null
+        private fun createMediaCursor(context: Context, selection: Selection, onlyLast: Boolean): Cursor? {
+            val cursor = context.contentResolver.query(
+                /* uri = */ MediaStore.Files.getContentUri("external"),
+                /* projection = */ projection,
+                /* selection = */ selection.selection,
+                /* selectionArgs = */ selection.arguments.toTypedArray(),
+                /* sortOrder = */ "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
             )
+            return if (cursor != null && onlyLast) {
+                // 如果只需要最新的一条记录
+                MatrixCursor(cursor.columnNames).apply {
+                    if (cursor.moveToFirst()) {
+                        addRow((0 until cursor.columnCount).map { cursor.getString(it) }.toTypedArray())
+                    }
+                }
+            } else {
+                cursor
+            }
         }
+        /*private fun createMediaCursor(context: PlatformContext, selection: Selection,onlyLast:Boolean): Cursor? {
+            return context.contentResolver.query(
+                *//* uri = *//* MediaStore.Files.getContentUri("external"),
+                *//* projection = *//* projection,
+                *//* selection = *//* selection.selection,
+                *//* selectionArgs = *//* selection.arguments.toTypedArray(),
+                *//* sortOrder = *//* "${MediaStore.Files.FileColumns.DATE_ADDED} DESC ${if(onlyLast) "LIMIT 1" else ""}",
+                *//*cancellationSignal=*//*null
+            )
+        }*/
 
         private data class Selection(val selection: String, val arguments: List<String>)
 

@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
 import cafe.adriel.voyager.navigator.internal.BackHandler
+import coil3.PlatformContext
 import coil3.Uri
 import coil3.compose.LocalPlatformContext
 import com.huhx.picker.component.AssetImageItem
@@ -76,7 +77,7 @@ import com.huhx.picker.viewmodel.AssetViewModel
 import compose_image_picker.imagepicker.generated.resources.Res
 import compose_image_picker.imagepicker.generated.resources.icon_back
 import compose_image_picker.imagepicker.generated.resources.icon_camera
-import compose_image_picker.imagepicker.generated.resources.message_selected_exceed
+//import compose_image_picker.imagepicker.generated.resources.message_selected_exceed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -125,7 +126,6 @@ internal fun AssetDisplayScreen(
     with(LocalDensity.current) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            contentWindowInsets = WindowInsets.waterfall,
             containerColor = Color.Black,
             topBar = {
                 DisplayTopAppBar(
@@ -174,7 +174,8 @@ private fun Density.DisplayTopAppBar(
                         initialTopBarHeight.value = height
                     }
                 }
-                .padding(top = WindowInsets.statusBars.getTop(this).toDp()),
+//                .padding(top = WindowInsets.statusBars.getTop(this).toDp())
+            ,
             navigationIcon = {
                 Box(
                     modifier = Modifier.size(48.dp)
@@ -270,11 +271,10 @@ private fun AssetContent(
     padding: MutableState<Dp>
 ) {
     var assets by remember { mutableStateOf(viewModel.getGroupedAssets(requestType)) }
-    println("AssetContent: ${assets.size}")
     val context = LocalPlatformContext.current
     val gridCount = LocalAssetConfig.current.gridCount
     val maxAssets = LocalAssetConfig.current.maxAssets
-    val errorMessage = stringResource(Res.string.message_selected_exceed, maxAssets)
+    val errorMessage = "你最多只能选择${maxAssets}个图片" //stringResource(Res.string.message_selected_exceed, maxAssets)
     val gridState = rememberSaveable(assets, saver = LazyGridState.Saver) {
         LazyGridState()
     }
@@ -291,8 +291,8 @@ private fun AssetContent(
     }
     val scope = rememberCoroutineScope()
 
-    val cameraLauncher = rememberCameraLauncher(scope) { success ->
-        if (success) {
+    val cameraLauncher = rememberCameraLauncher(scope) { info ->
+        if (info != null) {
             scope.launch { viewModel.initDirectories() }
         } else {
             scope.launch { viewModel.deleteImage(this@rememberCameraLauncher.uri) }
@@ -303,13 +303,13 @@ private fun AssetContent(
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.assets.size }
             .distinctUntilChanged()
-            .filter { it>0 }
+            .filter { it > 0 }
             .distinctUntilChanged()
             .collect {
                 scope.launch {
                     withContext(Dispatchers.IO) {
                         val a = viewModel.getGroupedAssets(requestType)
-                        if(a.isNotEmpty()){
+                        if (a.isNotEmpty()) {
                             cameraLauncher.fetchCameraUri(a)?.let {
                                 viewModel.selectedList.add(it)
                             }
@@ -335,8 +335,7 @@ private fun AssetContent(
         }.toTypedArray()))
     }
 
-    val impl = LocalStoragePermission.current
-        ?: throw IllegalStateException("LocalStoragePermission not found")
+    val impl = LocalStoragePermission.current ?: throw IllegalStateException("LocalStoragePermission not found")
     var cameraPermission by remember { mutableStateOf(false) }
     var cameraPermissionRequested by remember { mutableStateOf(false) }
 
@@ -376,7 +375,7 @@ private fun AssetContent(
                                 if (cameraPermission.not()) {
                                     withContext(Dispatchers.IO) {
                                         if (cameraPermission) {
-                                            cameraLauncher.launch(viewModel.getUri())
+                                            cameraLauncher.launch(context, viewModel.getUri())
                                             return@withContext
                                         }
                                         if (cameraPermissionRequested) {
@@ -388,7 +387,10 @@ private fun AssetContent(
                                             onGranted = {
                                                 cameraPermission = true
                                                 scope.launch {
-                                                    cameraLauncher.launch(viewModel.getUri())
+                                                    cameraLauncher.launch(
+                                                        context,
+                                                        viewModel.getUri()
+                                                    )
                                                 }
                                             },
                                             onDenied = {
@@ -399,7 +401,7 @@ private fun AssetContent(
                                     }
                                     return@launch
                                 } else {
-                                    cameraLauncher.launch(viewModel.getUri())
+                                    cameraLauncher.launch(context, viewModel.getUri())
                                 }
                             }
                         },
@@ -432,7 +434,7 @@ private fun AssetImage(
     val maxAssets = LocalAssetConfig.current.maxAssets
 
     if (assetInfo is AssetInfo.Camera) {
-        val errorMessage = stringResource(Res.string.message_selected_exceed, maxAssets)
+        val errorMessage = "你最多只能选择${maxAssets}个图片"//stringResource(Res.string.message_selected_exceed, maxAssets)
         Box(
             modifier = modifier.fillMaxSize()
                 .background(Color.Black)
@@ -461,7 +463,7 @@ private fun AssetImage(
 
         return
     } else {
-        val errorMessage = stringResource(Res.string.message_selected_exceed, maxAssets)
+        val errorMessage = "你最多只能选择${maxAssets}个图片"//stringResource(Res.string.message_selected_exceed, maxAssets)
         val selected =
             remember(assetInfo.id) { mutableStateOf(selectedList.any { it.id == assetInfo.id }) }
         LaunchedEffect(Unit) {
@@ -501,10 +503,14 @@ private fun AssetImage(
 }
 
 expect class CameraLauncher {
-    fun launch(uri: Uri?)
+    fun launch(context: PlatformContext, uri: Uri?)
     fun fetchCameraUri(assets: Map<String, List<AssetInfo>>): AssetInfo?
     val uri: Uri?
 }
 
 @Composable
-expect fun rememberCameraLauncher(scope:CoroutineScope,callback: CameraLauncher.(Boolean) -> Unit): CameraLauncher
+expect fun rememberCameraLauncher(
+    scope: CoroutineScope,
+    onCreate: (CameraLauncher) -> Unit = {},
+    callback: CameraLauncher.(AssetInfo?) -> Unit
+): CameraLauncher
