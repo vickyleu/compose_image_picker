@@ -435,7 +435,7 @@ private fun AssetImage(
 
     if (assetInfo is AssetInfo.Camera) {
         val errorMessage = "你最多只能选择${maxAssets}个图片"//stringResource(Res.string.message_selected_exceed, maxAssets)
-        Box(
+        BoxWithConstraints(
             modifier = modifier.fillMaxSize()
                 .background(Color.Black)
                 .clickable {

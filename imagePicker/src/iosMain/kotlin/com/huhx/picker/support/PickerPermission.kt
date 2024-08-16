@@ -77,6 +77,7 @@ fun PickerPermissions(content: @Composable () -> Unit) {
             val context = LocalPlatformContext.current
             Box(
                 modifier = Modifier
+                    .align(Alignment.Center)
                     .wrapContentSize()
                     .border(width = 1.dp, color = Color.White, RoundedCornerShape(5.dp))
                     .clickable {
