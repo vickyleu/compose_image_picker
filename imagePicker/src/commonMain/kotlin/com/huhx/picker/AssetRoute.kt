@@ -12,6 +12,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
+import cafe.adriel.voyager.navigator.internal.BackHandler
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.DateTimeFormatterKMP
 import com.huhx.picker.model.RequestType
@@ -21,6 +23,7 @@ import com.huhx.picker.view.AssetSelectorScreen
 import com.huhx.picker.viewmodel.AssetViewModel
 import kotlinx.datetime.LocalDateTime
 
+@OptIn(InternalVoyagerApi::class)
 @Composable
 internal fun AssetPickerRoute(
     navController: NavHostController,
@@ -28,6 +31,14 @@ internal fun AssetPickerRoute(
     onPicked: (List<AssetInfo>) -> Unit,
     onClose: (List<AssetInfo>) -> Unit,
 ) {
+
+    BackHandler(enabled = true,onBack = {
+        if (viewModel.selectedList.isNotEmpty()) {
+            onPicked(viewModel.selectedList)
+        } else {
+            onClose(viewModel.selectedList)
+        }
+    })
     NavHost(navController = navController, startDestination = AssetRoute.display) {
         composable(route = AssetRoute.display) {
             AssetDisplayScreen(
