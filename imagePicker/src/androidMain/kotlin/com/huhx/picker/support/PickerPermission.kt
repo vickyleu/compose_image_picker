@@ -42,6 +42,10 @@ fun PickerPermissions(content: @Composable () -> Unit) {
     val context = LocalContext.current
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
     var permissionsGranted by rememberSaveable { mutableStateOf(false) }
+
+    var cameraSettingsIsLaunch by remember { mutableStateOf(false) }
+    var cameraIsLaunch by remember { mutableStateOf(false) }
+
     val lifecycle = LocalLifecycleOwner.current
     val storagePermissionUtil = LocalStoragePermission.current?:throw IllegalStateException("LocalStoragePermission not found")
     LaunchedEffect(Unit) {
@@ -78,6 +82,7 @@ fun PickerPermissions(content: @Composable () -> Unit) {
         ) {
             Box(
                 modifier = Modifier
+                    .align(Alignment.Center)
                     .wrapContentSize()
                     .border(width = 1.dp, color = Color.White, RoundedCornerShape(5.dp))
                     .clickable {
