@@ -15,8 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.displayCutout
-import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -32,13 +32,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -129,7 +126,7 @@ internal fun AssetDisplayScreen(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = Color.Black,
-            contentWindowInsets = WindowInsets(0,0,0,0),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 DisplayTopAppBar(
                     selectedList = viewModel.selectedList,
@@ -167,17 +164,20 @@ private fun Density.DisplayTopAppBar(
     initialTopBarHeight: MutableState<Dp>,
 ) {
     with(LocalDensity.current) {
-        CenterAlignedTopAppBar(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .onGloballyPositioned {
-                    val height = it.size.height.toDp()
-                    if (initialTopBarHeight.value < height) {
-                        initialTopBarHeight.value = height
-                    }
-                },
-            navigationIcon = {
+
+        Box(modifier = Modifier.fillMaxWidth().height(48.dp)
+            .background(Color.Black)
+            .onGloballyPositioned {
+                val height = it.size.height.toDp()
+                if (initialTopBarHeight.value < height) {
+                    initialTopBarHeight.value = height
+                }
+            }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Box(
                     modifier = Modifier.size(48.dp)
                         .padding(8.dp)
@@ -192,17 +192,58 @@ private fun Density.DisplayTopAppBar(
                         contentScale = ContentScale.FillHeight,
                     )
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Box(
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .fillMaxHeight()
+                        .wrapContentSize()
+                        .background(ButtonDefaults.buttonColors().let {
+                            if (selectedList.isEmpty()) Color.Gray else it.containerColor
+                        }, RoundedCornerShape(3.dp))
+                        .clip(RoundedCornerShape(3.dp))
+                        .clickable(enabled = selectedList.isNotEmpty()) {
+                            onPicked(selectedList)
+                        }
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    val maxAssets = LocalAssetConfig.current.maxAssets
+                    Text(
+                        "完成${selectedList.size}/${maxAssets}",
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 13.sp, color = Color.White
+                    )
+                }
+
+            }
+        }
+
+        // todo iOS中的TopAppBar不能正常显示,修改为普通的Box
+        /*CenterAlignedTopAppBar(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .onGloballyPositioned {
+                    val height = it.size.height.toDp()
+                    if (initialTopBarHeight.value < height) {
+                        initialTopBarHeight.value = height
+                    }
+                },
+            navigationIcon = {
+
             },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                 containerColor = Color.Black
             ),
             title = {
-                /*Row(modifier = Modifier.clickable { navigateToDropDown(directory) }) {
+                *//*Row(modifier = Modifier.clickable { navigateToDropDown(directory) }) {
                     Text(text = directory, fontSize = 18.sp, color = Color.White)
                     Icon(imageVector = Icons.Default.KeyboardArrowDown,
                         tint = Color.White,
                         contentDescription = "")
-                }*/
+                }*//*
             },
             actions = {
                 Box(
@@ -225,7 +266,7 @@ private fun Density.DisplayTopAppBar(
                     )
                 }
             }
-        )
+        )*/
     }
 }
 
