@@ -45,12 +45,8 @@ internal class AssetViewModel(
                     it.directory
                 }.map {
                     AssetDirectory(directory = formatDirectoryName(it.key) to it.key, assets = it.value)
-                }.apply {
-                    println("initDirectories: ${this.size} ${assets.size}")
                 }
                 _directoryGroup.clear()
-
-                println("assets: ${assets.size}")
                 _directoryGroup.add(AssetDirectory(directory = init_directory, assets = assets))
                 _directoryGroup.addAll(directoryList)
             }

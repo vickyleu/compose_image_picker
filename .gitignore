@@ -19,3 +19,8 @@ local.properties
 .idea
 keystore.gradle
 gradle.properties
+
+
+iosApp/iosApp.xcodeproj/project.xcworkspace/
+iosApp/iosApp.xcodeproj/xcuserdata/
+iosApp/iosApp.xcodeproj/xcshareddata/

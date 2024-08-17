@@ -64,7 +64,6 @@ actual class DateTimeFormatterKMP(private val formatter: NSDateFormatter) {
         actual fun ofPattern(pattern: String): DateTimeFormatterKMP {
             return DateTimeFormatterKMP(NSDateFormatter().apply {
                 dateFormat = pattern
-                println("""Setting date format to "$pattern"""")
                 locale = NSLocale(localeIdentifier = "zh_CN")
             })
         }

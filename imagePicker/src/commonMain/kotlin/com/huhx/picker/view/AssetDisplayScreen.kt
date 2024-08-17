@@ -1,5 +1,6 @@
 package com.huhx.picker.view
 
+//import compose_image_picker.imagepicker.generated.resources.message_selected_exceed
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,17 +10,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.waterfall
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -72,12 +71,12 @@ import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.DateTimeFormatterKMP
 import com.huhx.picker.model.RequestType
 import com.huhx.picker.util.LocalStoragePermission
+import com.huhx.picker.util.getNavigationBarHeight
 import com.huhx.picker.util.goToAppSetting
 import com.huhx.picker.viewmodel.AssetViewModel
 import compose_image_picker.imagepicker.generated.resources.Res
 import compose_image_picker.imagepicker.generated.resources.icon_back
 import compose_image_picker.imagepicker.generated.resources.icon_camera
-//import compose_image_picker.imagepicker.generated.resources.message_selected_exceed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -86,7 +85,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.resources.stringResource
 
 
 @Composable
@@ -173,20 +171,19 @@ private fun Density.DisplayTopAppBar(
                     if (initialTopBarHeight.value < height) {
                         initialTopBarHeight.value = height
                     }
-                }
-//                .padding(top = WindowInsets.statusBars.getTop(this).toDp())
-            ,
+                },
             navigationIcon = {
                 Box(
                     modifier = Modifier.size(48.dp)
                         .padding(8.dp)
+                        .clickable {
+                            navigateUp(selectedList)
+                        }.padding(horizontal = 3.dp, vertical = 3.dp)
                 ) {
                     Image(
                         painter = painterResource(Res.drawable.icon_back),
                         contentDescription = "",
-                        modifier = Modifier.fillMaxSize().clickable {
-                            navigateUp(selectedList)
-                        },
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.FillHeight,
                     )
                 }
@@ -245,15 +242,17 @@ private fun Density.DisplayBottomBar(
                         initialBottomBarHeight.value = height
                     }
                 }
+                .padding(bottom = getNavigationBarHeight())
                 .pointerInput(Unit) {
                     detectTapGestures {
                         //
                     }
-                }
-                .padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceAround
+                },
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(
+                contentPadding = PaddingValues(0.dp),
                 onClick = { navigateToDropDown(viewModel.directory.second) },
                 content = {
                     Text(viewModel.directory.first, fontSize = 16.sp, color = Color.White)
@@ -274,7 +273,8 @@ private fun AssetContent(
     val context = LocalPlatformContext.current
     val gridCount = LocalAssetConfig.current.gridCount
     val maxAssets = LocalAssetConfig.current.maxAssets
-    val errorMessage = "你最多只能选择${maxAssets}个图片" //stringResource(Res.string.message_selected_exceed, maxAssets)
+    val errorMessage =
+        "你最多只能选择${maxAssets}个图片" //stringResource(Res.string.message_selected_exceed, maxAssets)
     val gridState = rememberSaveable(assets, saver = LazyGridState.Saver) {
         LazyGridState()
     }
@@ -335,7 +335,8 @@ private fun AssetContent(
         }.toTypedArray()))
     }
 
-    val impl = LocalStoragePermission.current ?: throw IllegalStateException("LocalStoragePermission not found")
+    val impl = LocalStoragePermission.current
+        ?: throw IllegalStateException("LocalStoragePermission not found")
     var cameraPermission by remember { mutableStateOf(false) }
     var cameraPermissionRequested by remember { mutableStateOf(false) }
 
@@ -434,7 +435,8 @@ private fun AssetImage(
     val maxAssets = LocalAssetConfig.current.maxAssets
 
     if (assetInfo is AssetInfo.Camera) {
-        val errorMessage = "你最多只能选择${maxAssets}个图片"//stringResource(Res.string.message_selected_exceed, maxAssets)
+        val errorMessage =
+            "你最多只能选择${maxAssets}个图片"//stringResource(Res.string.message_selected_exceed, maxAssets)
         BoxWithConstraints(
             modifier = modifier.fillMaxSize()
                 .background(Color.Black)
@@ -455,7 +457,9 @@ private fun AssetImage(
                 Image(
                     painter = painterResource(Res.drawable.icon_camera),
                     contentDescription = "",
-                    modifier = Modifier.wrapContentSize()
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.fillMaxWidth(fraction = 0.4f)
+                        .aspectRatio(1f),
                 )
                 Text("拍照", fontSize = 12.sp, color = Color.White)
             }
@@ -463,7 +467,8 @@ private fun AssetImage(
 
         return
     } else {
-        val errorMessage = "你最多只能选择${maxAssets}个图片"//stringResource(Res.string.message_selected_exceed, maxAssets)
+        val errorMessage =
+            "你最多只能选择${maxAssets}个图片"//stringResource(Res.string.message_selected_exceed, maxAssets)
         val selected =
             remember(assetInfo.id) { mutableStateOf(selectedList.any { it.id == assetInfo.id }) }
         LaunchedEffect(Unit) {
