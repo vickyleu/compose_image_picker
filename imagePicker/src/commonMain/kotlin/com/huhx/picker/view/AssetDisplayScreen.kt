@@ -199,7 +199,7 @@ private fun Density.DisplayTopAppBar(
                     modifier = Modifier
                         .wrapContentWidth()
                         .fillMaxHeight()
-                        .wrapContentSize()
+                        .padding(end = 15.dp)
                         .background(ButtonDefaults.buttonColors().let {
                             if (selectedList.isEmpty()) Color.Gray else it.containerColor
                         }, RoundedCornerShape(3.dp))
