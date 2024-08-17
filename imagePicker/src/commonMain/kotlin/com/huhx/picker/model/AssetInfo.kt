@@ -28,10 +28,10 @@ expect class DateTimeFormatterKMP {
 open class AssetInfo(
     val id: String,
     val uriString: String,
-    val filepath: String,
+    open val filepath: String,
     val filename: String,
     val directory: String,
-    val size: Long,
+    open val size: Long,
     val mediaType: Int,
     val mimeType: String,
     val duration: Long? = null,

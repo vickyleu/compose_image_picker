@@ -235,6 +235,32 @@ dependencyResolutionManagement {
                 excludeGroupByRegex("io.github.*")
             }
         }
+
+
+        maven {
+            url = uri("https://maven.pkg.github.com/vickyleu/compose_image_picker")
+            val properties = java.util.Properties().apply {
+                runCatching { rootProject.projectDir.resolve("local.properties") }
+                    .getOrNull()
+                    .takeIf { it?.exists() ?: false }
+                    ?.reader()
+                    ?.use(::load)
+            }
+            val environment: Map<String, String?> = System.getenv()
+            extra["githubToken"] = properties["github.token"] as? String
+                ?: environment["GITHUB_TOKEN"] ?: ""
+            credentials {
+                username = "vickyleu"
+                password = extra["githubToken"]?.toString()
+            }
+            content {
+                excludeGroupByRegex("com.finogeeks.*")
+                excludeGroupByRegex("org.jogamp.*")
+                excludeGroupByRegex("org.jetbrains.compose.*")
+                excludeGroupByRegex("(?!com|cn).github.(?!vickyleu).*")
+            }
+        }
+
     }
 }
 

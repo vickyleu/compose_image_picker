@@ -2,6 +2,8 @@ package com.huhx.picker.model
 
 import coil3.Uri
 import coil3.toUri
+import com.huhx.picker.provider.AssetLoader
+import com.huhx.picker.provider.toPHAsset
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -18,7 +20,6 @@ import platform.Foundation.NSCalendarUnitYear
 import platform.Foundation.NSDateComponents
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSLocale
-import platform.Photos.PHAsset
 import platform.Photos.PHAssetMediaTypeImage
 import platform.Photos.PHAssetMediaTypeVideo
 import platform.Photos.PHContentEditingInputRequestOptions
@@ -107,20 +108,31 @@ actual suspend fun AssetInfo.toUri(): Uri {
     val uriStr = this.uriString
     val completer = CompletableDeferred<String>()
     withContext(Dispatchers.IO) {
-        if (uriStr.startsWith("phasset://")) {
-            val localIdentifier = uriStr.substring("phasset://".length)
-            val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(localIdentifier), null)
-            val asset = fetchResult.firstObject() as? PHAsset ?: return@withContext run {
+        val filePathByImpl = if(this@toUri is AssetLoader.AssetInfoImpl){
+            this@toUri._filePath
+        }else{
+            this@toUri.filepath
+        }
+        if (filePathByImpl.isNotBlank()) {
+            completer.complete(filePathByImpl)
+        } else {
+            if (uriStr.startsWith("phasset://")) {
+                this@toUri.size.toInt()
+                val localIdentifier = uriStr.substring("phasset://".length)
+                val asset = localIdentifier.toPHAsset() ?: return@withContext run {
+                    completer.complete(uriStr)
+                }
+                asset.requestContentEditingInputWithOptions(options = PHContentEditingInputRequestOptions.new()) { contentEditingInput, info ->
+                    val imageURL = contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
+                    println("imageURL: $imageURL")
+                    if(this@toUri is AssetLoader.AssetInfoImpl){
+                        this@toUri.setFilePath(imageURL)
+                    }
+                    completer.complete(imageURL)
+                }
+            } else {
                 completer.complete(uriStr)
             }
-            asset.requestContentEditingInputWithOptions(options = PHContentEditingInputRequestOptions.new()) {
-                    contentEditingInput, info ->
-                val imageURL = contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
-                println("imageURL: $imageURL")
-                completer.complete(imageURL)
-            }
-        }else{
-            completer.complete(uriStr)
         }
     }
     val imageURL = completer.await()

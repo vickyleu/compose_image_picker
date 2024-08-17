@@ -197,6 +197,7 @@ private fun Density.DisplayTopAppBar(
 
                 Box(
                     modifier = Modifier
+                        .padding(vertical = 5.dp)
                         .wrapContentWidth()
                         .fillMaxHeight()
                         .padding(end = 15.dp)
