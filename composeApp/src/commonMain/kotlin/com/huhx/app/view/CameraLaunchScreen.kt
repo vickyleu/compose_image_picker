@@ -36,8 +36,7 @@ class CameraLaunchViewModel : BasicViewModel() {
 }
 
 class CameraLaunchScreen(
-    viewModel: CameraLaunchViewModel
-) : BasicScreen<CameraLaunchViewModel>(create = { viewModel }) {
+) : BasicScreen<CameraLaunchViewModel>(create = { CameraLaunchViewModel() }) {
     @Composable
     override fun modelContent(
         model: CameraLaunchViewModel,

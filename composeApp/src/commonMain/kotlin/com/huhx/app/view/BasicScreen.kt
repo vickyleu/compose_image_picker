@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -35,9 +36,15 @@ import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
+import cafe.adriel.voyager.navigator.internal.BackHandler
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import cafe.adriel.voyager.transitions.ScreenTransition
+import com.huhx.app.getTabBarHeight
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.jvm.Transient
 
 expect interface BasicScreenSerializer
@@ -62,6 +69,7 @@ abstract class BasicScreen<T : BasicViewModel>(
         get() = Color.White//MaterialTheme.colorScheme.background
 
 
+    @OptIn(InternalVoyagerApi::class)
     @Suppress("UNCHECKED_CAST")
     @Composable
     final override fun Content() {
@@ -110,6 +118,34 @@ abstract class BasicScreen<T : BasicViewModel>(
                             .background(Color.Transparent)
                     ) {
                         modelContent(screenModel as T, navigator, tabbarHeight)
+                    }
+                },
+                topBar = {
+                    BackHandler(enabled = true) {
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                if (model.onBackPressed()) {
+                                    withContext(Dispatchers.Main) {
+                                        if (navigator.canPop) {
+                                            scope.launch {
+                                                val agree = onBackPressed(model, navigator)
+                                                if (agree) {
+                                                    model.apply {
+                                                        val depth = screenDepth(this@BasicScreen)
+                                                        model.dejectScreen(this@BasicScreen, scope, depth)
+                                                    }
+                                                    navigator.pop()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    val nav= getTabBarHeight()
+                    LaunchedEffect(Unit){
+                        topAppBarHeightAssign.value = nav
                     }
                 },
                 bottomBar = {

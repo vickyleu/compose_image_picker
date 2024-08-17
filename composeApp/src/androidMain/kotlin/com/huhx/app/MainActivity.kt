@@ -1,6 +1,5 @@
 package com.huhx.app
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,8 +22,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -34,17 +31,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.rememberNavController
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
 import cafe.adriel.voyager.transitions.SlideTransition
-import com.huhx.app.data.MomentModelFactory
-import com.huhx.app.data.MomentRepository
-import com.huhx.app.data.MomentViewModel
 import com.huhx.app.ui.theme.Compose_image_pickerTheme
 import com.huhx.app.view.CameraLaunchScreen
-import com.huhx.app.view.CameraLaunchViewModel
+import com.huhx.app.view.DisplayScreen
 import com.huhx.app.view.LocalNavigatorController
 import com.huhx.picker.component.AssetImageItem
 import com.huhx.picker.model.AssetInfo
@@ -65,37 +57,7 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             CompositionLocalProvider(LocalStoragePermission provides impl) {
-                Compose_image_pickerTheme {
-                    val navController = rememberNavController()
-                    val viewModel: MomentViewModel = viewModel(
-                        factory = MomentModelFactory(momentRepository = MomentRepository())
-                    )
-                    if (false) {
-                        val startScreen = remember {
-                            CameraLaunchScreen(CameraLaunchViewModel())
-                        }
-                        Navigator(
-                            screen = startScreen,
-                            disposeBehavior = NavigatorDisposeBehavior(
-                                disposeNestedNavigators = false,
-                                disposeSteps = false
-                            ),
-                            onBackPressed = { currentScreen ->
-                                false
-                            }
-                        ) {
-                            CompositionLocalProvider(LocalNavigatorController provides it) {
-                                SlideTransition(
-                                    it, modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color.White)
-                                )
-                            }
-                        }
-                    } else {
-                        AppRoute(navController = navController, viewModel = viewModel)
-                    }
-                }
+                App()
             }
         }
     }

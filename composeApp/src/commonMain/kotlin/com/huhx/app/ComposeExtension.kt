@@ -1,4 +1,4 @@
-package com.huhx.picker.util
+package com.huhx.app
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalDensity
