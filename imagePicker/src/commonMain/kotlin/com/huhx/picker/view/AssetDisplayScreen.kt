@@ -208,7 +208,8 @@ private fun Density.DisplayTopAppBar(
                         .clickable(enabled = selectedList.isNotEmpty()) {
                             onPicked(selectedList)
                         }
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     val maxAssets = LocalAssetConfig.current.maxAssets
                     Text(

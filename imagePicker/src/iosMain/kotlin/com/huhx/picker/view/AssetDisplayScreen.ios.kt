@@ -33,13 +33,15 @@ actual class CameraLauncher(
 
     actual fun fetchCameraUri(assets: Map<String, List<AssetInfo>>): AssetInfo? {
         var assetInfo: AssetInfo? = null
-        if (assetInfo != null) {
+        if (this.assetInfo != null) {
+            val ass = this.assetInfo!!
             assets.values.forEach each@{
                 it.forEach {
-                    if (it.uriString == this.assetInfo!!.uriString) {
+                    println("it.uriString: ${it.uriString}  assetInfo.uriString: ${ass.uriString}")
+                    if (it.uriString == ass.uriString) {
                         assetInfo = it
                         this.assetInfo = null
-                        return@each
+                        return it
                     }
                 }
             }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
@@ -157,7 +158,7 @@ fun AssetPreviewScreen(
                             )
                         }
                         Box(
-                            modifier = Modifier.fillMaxHeight().wrapContentWidth()
+                            modifier = Modifier.fillMaxHeight().fillMaxHeight()
                                 .requiredWidthIn(
                                     min = androidx.compose.ui.unit.max(leftWidth, rightWidth),
                                 )
@@ -168,7 +169,7 @@ fun AssetPreviewScreen(
                             contentAlignment = Alignment.CenterEnd
                         ) {
                             Text(
-                                modifier = Modifier.fillMaxHeight().wrapContentWidth()
+                                modifier = Modifier.wrapContentHeight().wrapContentWidth()
                                     .padding(horizontal = 4.dp),
                                 text = "${pageState.currentPage + 1}/${assets.size}",
                                 style = MaterialTheme.typography.bodyLarge.copy(

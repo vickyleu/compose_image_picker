@@ -19,6 +19,9 @@ import androidx.compose.ui.unit.Dp
 import cafe.adriel.voyager.navigator.Navigator
 import coil3.Uri
 import coil3.compose.LocalPlatformContext
+import com.github.jing332.filepicker.base.FileImpl
+import com.github.jing332.filepicker.base.inputStream
+import com.github.jing332.filepicker.base.useImpl
 import com.huhx.picker.model.toUri
 import com.huhx.picker.provider.AssetLoader
 import com.huhx.picker.util.LocalStoragePermission
@@ -55,14 +58,12 @@ class CameraLaunchScreen(
                 if (info!=null) {
                     scope.launch {
                         info.toUri().path?.let {
-                            /*val buffer = ByteArray(info.size.toInt())
+                            val buffer = ByteArray(info.size.toInt())
                             FileImpl(it).inputStream().useImpl {
                                 it.read(buffer)
                             }
-                            navigator.pop()*/
-//                                ${buffer.size}
-                            println("bytesRead:  ${it} ")
-//                                model.callback(listOf(buffer))
+                            navigator.pop()
+                            println("bytesRead:  ${it} size=>${info.size.toInt()}")
                         }?:run{
                             navigator.pop()
                         }

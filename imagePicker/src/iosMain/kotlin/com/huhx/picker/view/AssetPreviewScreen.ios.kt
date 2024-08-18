@@ -17,6 +17,7 @@ import coil3.request.ImageRequest
 import coil3.request.Options
 import coil3.toUri
 import com.huhx.picker.model.AssetInfo
+import com.huhx.picker.provider.AssetLoader
 import com.huhx.picker.provider.AssetLoader.Companion.uriString
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -288,16 +289,14 @@ class IOSCameraController(
         asset?.let {
             val fileName = asset.valueForKey("filename") as? String ?: ""
             val mimeType = "image/jpeg" // 根据需要设置MIME类型
-            val info = AssetInfo(
+            val info = AssetLoader.AssetInfoImpl(
                     id = asset.localIdentifier,
                     uriString = NSURL(string = "phasset://${asset.localIdentifier}").uriString,
-                    filepath = "", // iOS上没有直接的文件路径
                     filename = fileName,
                     date = asset.creationDate?.timeIntervalSince1970?.toLong()
                         ?.times(1000) ?: 0L,
                     mediaType = asset.mediaType.toInt(),
                     mimeType = mimeType,
-                    size = 0L, // 需要进一步实现获取文件大小
                     duration = asset.duration.toLong(),
                     directory = "Photo" // iOS上没有直接的文件目录
                 )
