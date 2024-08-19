@@ -323,7 +323,9 @@ fun ImagePreview(
         filterQuality = FilterQuality.Low,
         model = ImageRequest.Builder(LocalPlatformContext.current)
             .data(uriString)
-            .decoderFactoryPlatform()
+            .decoderFactoryPlatform{
+                println("progress: $it")
+            }
             .build()
     )
 
@@ -347,4 +349,4 @@ expect fun VideoPreview(
     loading: (@Composable () -> Unit)? = null,
 )
 
-expect fun ImageRequest.Builder.decoderFactoryPlatform(): ImageRequest.Builder
+expect fun ImageRequest.Builder.decoderFactoryPlatform(progress:(Int)->Unit): ImageRequest.Builder

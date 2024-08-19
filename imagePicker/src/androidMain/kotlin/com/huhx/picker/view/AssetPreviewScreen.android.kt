@@ -67,6 +67,6 @@ actual fun VideoPreview(
             }
         })
 }
-actual fun ImageRequest. Builder.decoderFactoryPlatform(): ImageRequest.Builder{
+actual fun ImageRequest. Builder.decoderFactoryPlatform(progress:(Int)->Unit): ImageRequest.Builder{
     return if (Build.VERSION.SDK_INT >= 28) decoderFactory(AnimatedImageDecoder.Factory()) else decoderFactory(GifDecoder.Factory())
 }

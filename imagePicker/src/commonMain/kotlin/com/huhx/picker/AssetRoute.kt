@@ -33,10 +33,13 @@ internal fun AssetPickerRoute(
 ) {
 
     BackHandler(enabled = true,onBack = {
+        val list = mutableListOf<AssetInfo>()
+        list.addAll(viewModel.selectedList)
+        viewModel.selectedList.clear()
         if (viewModel.selectedList.isNotEmpty()) {
-            onPicked(viewModel.selectedList)
+            onPicked(list)
         } else {
-            onClose(viewModel.selectedList)
+            onPicked(list)
         }
     })
     NavHost(navController = navController, startDestination = AssetRoute.display) {
@@ -44,8 +47,18 @@ internal fun AssetPickerRoute(
             AssetDisplayScreen(
                 viewModel = viewModel,
                 navigateToDropDown = { navController.navigate(AssetRoute.selector(it)) },
-                onPicked = onPicked,
-                onClose = onClose,
+                onPicked = {
+                    val list = mutableListOf<AssetInfo>()
+                    list.addAll(viewModel.selectedList)
+                    viewModel.selectedList.clear()
+                    onPicked(list)
+                },
+                onClose = {
+                    val list = mutableListOf<AssetInfo>()
+                    list.addAll(viewModel.selectedList)
+                    viewModel.selectedList.clear()
+                    onClose(list)
+                },
             )
         }
 

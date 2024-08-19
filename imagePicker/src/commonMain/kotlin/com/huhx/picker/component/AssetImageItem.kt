@@ -79,7 +79,9 @@ fun AssetImageItem(
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(urlString)
-                .decoderFactoryPlatform()
+                .decoderFactoryPlatform{
+
+                }
 //                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
                 .crossfade(true)
 
@@ -178,7 +180,9 @@ fun SelectedAssetImageItem(
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(assetInfo.uriString)
-                .decoderFactoryPlatform()
+                .decoderFactoryPlatform{
+                    println("progress: $it")
+                }
 //                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
                 .crossfade(true)
                 .build(),
