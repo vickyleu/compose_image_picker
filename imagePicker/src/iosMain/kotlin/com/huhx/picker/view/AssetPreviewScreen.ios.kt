@@ -1,7 +1,6 @@
 package com.huhx.picker.view
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import coil3.DrawableImage
@@ -15,19 +14,18 @@ import coil3.fetch.Fetcher
 import coil3.fetch.SourceFetchResult
 import coil3.request.ImageRequest
 import coil3.request.Options
-import coil3.toUri
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.provider.AssetLoader
 import com.huhx.picker.provider.AssetLoader.Companion.uriString
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -38,7 +36,6 @@ import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Paint
 import platform.Foundation.NSData
 import platform.Foundation.NSError
-import platform.Foundation.NSSelectorFromString
 import platform.Foundation.NSSortDescriptor
 import platform.Foundation.NSURL
 import platform.Foundation.timeIntervalSince1970
@@ -48,6 +45,8 @@ import platform.Photos.PHAssetMediaTypeImage
 import platform.Photos.PHFetchOptions
 import platform.Photos.PHImageManager
 import platform.Photos.PHImageRequestOptions
+import platform.Photos.PHImageRequestOptionsDeliveryModeHighQualityFormat
+import platform.Photos.PHImageRequestOptionsResizeModeExact
 import platform.UIKit.UIImage
 import platform.UIKit.UIImagePickerController
 import platform.UIKit.UIImagePickerControllerDelegateProtocol
@@ -95,11 +94,19 @@ class ProgressDrawable : DrawableImage() {
 private val fetcherFactory = PHAssetFetcherFactory()
 
 @OptIn(ExperimentalCoilApi::class)
-actual fun ImageRequest.Builder.decoderFactoryPlatform(): ImageRequest.Builder {
-    return this.fetcherFactory(fetcherFactory)
+actual fun ImageRequest.Builder.decoderFactoryPlatform(progress:(Int)->Unit): ImageRequest.Builder {
+
+    this.listener(onSuccess = { imageRequest, result ->
+        progress.invoke(100)
+        imageRequest.target?.onSuccess(result.image)
+    }, onError = { imageRequest, result ->
+        progress.invoke(0)
+    })
+    return this
+        .fetcherFactory(fetcherFactory)
         .placeholder {
             (it.fetcherFactory?.first as? PHAssetFetcherFactory)?.let {
-                val p = it.progress.value
+//                val p = it.progress.value
             }
             null
         }
@@ -108,72 +115,93 @@ actual fun ImageRequest.Builder.decoderFactoryPlatform(): ImageRequest.Builder {
 class PHAssetFetcher(
     private val uri: Uri,
     private val options: Options,
-    private val progress: MutableState<Int>
+    private val imageLoader: ImageLoader
 ) : Fetcher {
-
+    internal val progress = mutableStateOf(0)
     override suspend fun fetch(): FetchResult {
         val uriStr = uri.toString()
         val localIdentifier = uriStr.substring("phasset://".length)
-        return withContext(Dispatchers.IO) {
-            val imageData = getImageDataFromPHAsset(localIdentifier)
-            val bufferedSource: BufferedSource = imageData?.let { Buffer().write(it) }
-                ?: throw Exception("Failed to get image data")
-            return@withContext SourceFetchResult(
-                source = ImageSource(
-                    source = bufferedSource,
-                    fileSystem = FileSystem.SYSTEM,
-                    metadata = null,
-                ),
-                mimeType = "image/jpeg",
-                dataSource = DataSource.MEMORY,
-            )
-        }
-    }
-
-    @OptIn(ExperimentalForeignApi::class)
-    private suspend fun getImageDataFromPHAsset(
-        localIdentifier: String?
-    ): ByteArray? {
-        val completer = CompletableDeferred<ByteArray?>()
+        val bufferedSource: BufferedSource = Buffer()
         withContext(Dispatchers.IO) {
-            val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(localIdentifier), null)
-            val asset = fetchResult.firstObject() as? PHAsset ?: return@withContext run {
-                completer.complete(null)
-            }
-            var imageData: ByteArray?
-            val options = PHImageRequestOptions()
-            options.networkAccessAllowed = true
-            options.synchronous = false
-            options.progressHandler = { progress, error, stop, info ->
-                val p = (progress * 100f).toInt().coerceIn(0, 100)
-                this@PHAssetFetcher.progress.value = p
-                if (error != null) {
-                    println("下载进度: ${p} error:${error}")
-                    completer.complete(null)
-                } else if (p == 100) {
+            var attempt = 0
+            val maxRetries = 3
+            var imageData: ByteArray? = null
+            while (attempt < maxRetries) {
+                attempt++
+                imageData = withContext(Dispatchers.IO) {
+                    getImageDataFromPHAsset(localIdentifier, options) {
+                        progress.value = it
+                    }
+                }
+                if (imageData != null) {
+                    bufferedSource.buffer.write(imageData)
+                    bufferedSource.buffer.flush()
+                    break
+                }
+                if (attempt < maxRetries) {
+                    delay(1000L)  // 等待一秒后重试
                 }
             }
-            PHImageManager.defaultManager()
-                .requestImageDataForAsset(asset, options) { data, _, _, _ ->
-                    imageData = data?.toByteArray()
-                    completer.complete(imageData)
-                }
+            if (imageData == null) {
+                throw Exception("Failed to get image data after $maxRetries attempts")
+            }
         }
-        return completer.await()
+        return SourceFetchResult(
+            source = ImageSource(
+                source = bufferedSource,
+                fileSystem = FileSystem.SYSTEM,
+                metadata = null,
+            ),
+            mimeType = "image/jpeg",
+            dataSource = DataSource.NETWORK,
+        )
+
     }
 
-    @OptIn(ExperimentalForeignApi::class)
-    private fun NSData.toByteArray(): ByteArray {
-        val byteArray = ByteArray(length.toInt())
-        byteArray.usePinned {
-            memcpy(it.addressOf(0), bytes, length)
-        }
-        return byteArray
-    }
 }
 
+@OptIn(ExperimentalForeignApi::class)
+internal suspend fun getImageDataFromPHAsset(
+    localIdentifier: String?, optionsCoil: Options,progressCallback: (Int)->Unit
+): ByteArray? {
+    val completer = CompletableDeferred<ByteArray?>()
+    withContext(Dispatchers.IO) {
+        val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(localIdentifier), null)
+        val asset = fetchResult.firstObject() as? PHAsset ?: return@withContext run {
+            completer.complete(null)
+        }
+        var imageData: ByteArray?
+        val options = PHImageRequestOptions()
+        options.networkAccessAllowed = true
+        options.synchronous = false
+        options.progressHandler = { progress, error, stop, info ->
+            val p = (progress * 100f).toInt().coerceIn(0, 100)
+            progressCallback.invoke(p)
+            println("下载进度: ${p}")
+            if (error != null) {
+                println("下载进度: ${p} error:${error}")
+                completer.complete(null)
+            } else if (p == 100) {
+            }
+        }
+        PHImageManager.defaultManager()
+            .requestImageDataForAsset(asset, options) { data, _, _, _ ->
+                imageData = data?.toByteArray()
+                completer.complete(imageData)
+            }
+    }
+    return completer.await()
+}
+@OptIn(ExperimentalForeignApi::class)
+private fun NSData.toByteArray(): ByteArray {
+    val byteArray = ByteArray(length.toInt())
+    byteArray.usePinned {
+        memcpy(it.addressOf(0), bytes, length)
+    }
+    return byteArray
+}
 class PHAssetFetcherFactory : Fetcher.Factory<Uri> {
-    internal val progress = mutableStateOf(0)
+
     override fun create(
         data: Uri,
         options: Options,
@@ -181,8 +209,9 @@ class PHAssetFetcherFactory : Fetcher.Factory<Uri> {
     ): Fetcher? {
         // 判断是否是我们需要处理的URI
         if (data.scheme == "phasset") {
-            return PHAssetFetcher(data, options, progress)
+            return PHAssetFetcher(data, options, imageLoader)
         }
+        println("PHAssetFetcherFactory create are you sure?")
         return null
     }
 }

@@ -71,6 +71,7 @@ import com.huhx.picker.component.AssetImageItem
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.DateTimeFormatterKMP
 import com.huhx.picker.model.RequestType
+import com.huhx.picker.model.toUri
 import com.huhx.picker.util.LocalStoragePermission
 import com.huhx.picker.util.getNavigationBarHeight
 import com.huhx.picker.util.goToAppSetting
@@ -359,7 +360,9 @@ private fun AssetContent(
                         val a = viewModel.getGroupedAssets(requestType)
                         if (a.isNotEmpty()) {
                             cameraLauncher.fetchCameraUri(a)?.let {
-                                viewModel.selectedList.add(it)
+                                viewModel.selectedList.add(it.apply {
+                                    toUri()
+                                })
                             }
                         }
                         assets = a

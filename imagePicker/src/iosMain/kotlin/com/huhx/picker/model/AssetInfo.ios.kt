@@ -7,6 +7,7 @@ import com.huhx.picker.provider.toPHAsset
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toNSDateComponents
@@ -118,6 +119,8 @@ actual suspend fun AssetInfo.toUri(): Uri {
         } else {
             if (uriStr.startsWith("phasset://")) {
                 this@toUri.size.toInt()
+                delay(300)
+                println("uriStr: $uriStr size:${this@toUri.size.toInt()}")
                 val localIdentifier = uriStr.substring("phasset://".length)
                 val asset = localIdentifier.toPHAsset() ?: return@withContext run {
                     completer.complete(uriStr)
