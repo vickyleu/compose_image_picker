@@ -20,7 +20,7 @@ import com.huhx.app.view.LocalNavigatorController
 fun App(){
     Compose_image_pickerTheme {
         val startScreen = remember {
-            if (true) {
+            if (false) {
                 CameraLaunchScreen()
             } else {
                 DisplayScreen()

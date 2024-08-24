@@ -129,7 +129,9 @@ object AssetRoute {
     fun preview(index: Int, dateString: String, requestType: RequestType): String {
         return preview.replaceFirst("{index}", index.toString())
             .replaceFirst("{dateString}", dateString)
-            .replaceFirst("{requestType}", requestType.name)
+            .replaceFirst("{requestType}", requestType.name).apply {
+                println("preview======>> $this")
+            }
     }
 
     fun selector(directory: String): String {
