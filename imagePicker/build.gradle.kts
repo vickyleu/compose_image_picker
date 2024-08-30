@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.android.library)
     id(libs.plugins.jetbrains.compose.get().pluginId)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.parcelize)
 }
 
 kotlin {
@@ -67,6 +68,7 @@ kotlin {
             implementation(libs.voyager.screenmodel)
             implementation(libs.voyager.navigator.bottomsheet)
             implementation(libs.voyager.navigator.tab)
+            implementation(libs.voyager.transitions)
 
         }
 

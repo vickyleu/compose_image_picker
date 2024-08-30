@@ -33,11 +33,9 @@ fun AssetPicker(
     onLoading: @Composable (() -> Unit)? = null,
 ) {
     val context = LocalPlatformContext.current
-    val navController = rememberNavController()
     val viewModel: AssetViewModel = viewModel(
         factory = AssetViewModelFactory(
             assetPickerRepository = AssetPickerRepository(context),
-            navController = navController
         )
     )
     val isLoading = remember { mutableStateOf(true) }
@@ -61,7 +59,6 @@ fun AssetPicker(
         else -> {
             CompositionLocalProvider(LocalAssetConfig provides assetPickerConfig) {
                 AssetPickerRoute(
-                    navController = navController,
                     viewModel = viewModel,
                     onPicked = onPicked,
                     onClose = onClose,

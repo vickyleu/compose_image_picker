@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,7 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -33,7 +31,6 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -63,19 +60,24 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
+import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.internal.BackHandler
 import coil3.PlatformContext
 import coil3.Uri
 import coil3.compose.LocalPlatformContext
+import com.huhx.picker.base.BasicScreen
 import com.huhx.picker.component.AssetImageItem
+import com.huhx.picker.formatDirectoryName
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.DateTimeFormatterKMP
 import com.huhx.picker.model.RequestType
+import com.huhx.picker.model.page.AssetDisplayViewModel
 import com.huhx.picker.model.toUri
 import com.huhx.picker.util.LocalStoragePermission
 import com.huhx.picker.util.getNavigationBarHeight
 import com.huhx.picker.util.goToAppSetting
 import com.huhx.picker.viewmodel.AssetViewModel
+import com.huhx.picker.viewmodel.LocalAssetViewModelProvider
 import compose_image_picker.imagepicker.generated.resources.Res
 import compose_image_picker.imagepicker.generated.resources.icon_back
 import compose_image_picker.imagepicker.generated.resources.icon_camera
@@ -89,72 +91,105 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 
 
-@Composable
-private fun rememberLazyGridModelState(
-    initialFirstVisibleItemIndex: Int = 0,
-    initialFirstVisibleItemScrollOffset: Int = 0,
-    initialCheck: () -> LazyGridState?,
-    initialCallback: (LazyGridState) -> Unit
-): LazyGridState {
-    return rememberSaveable(saver = LazyGridState.Saver) {
-        initialCheck.invoke() ?: LazyGridState(
-            initialFirstVisibleItemIndex,
-            initialFirstVisibleItemScrollOffset
-        ).apply(initialCallback)
-    }
-}
-
-@OptIn(InternalVoyagerApi::class)
-@Composable
-internal fun AssetDisplayScreen(
-    viewModel: AssetViewModel,
-    navigateToDropDown: (String) -> Unit,
-    onPicked: (List<AssetInfo>) -> Unit,
+internal class AssetDisplayScreen(
     onClose: (List<AssetInfo>) -> Unit,
-) {
-    BackHandler(enabled = true) {
-        if (viewModel.selectedList.isNotEmpty()) {
-            viewModel.clear()
+    onPicked: (List<AssetInfo>) -> Unit,
+    viewModel: AssetViewModel
+) : BasicScreen<AssetDisplayViewModel>(create = {
+    AssetDisplayViewModel(
+        viewModel,
+        onPicked,
+        onClose
+    )
+}) {
+
+    override suspend fun onBackPressed(
+        model: AssetDisplayViewModel,
+        navigator: Navigator
+    ): Boolean {
+        if (model.viewModel.selectedList.isNotEmpty()) {
+            model.viewModel.clear()
         } else {
-            onClose(viewModel.selectedList)
+            model.onClose(model.viewModel.selectedList)
+        }
+        return super.onBackPressed(model, navigator)
+    }
+
+    @Composable
+    override fun modelContent(
+        model: AssetDisplayViewModel,
+        navigator: Navigator,
+        tabbarHeight: Dp
+    ) {
+        val viewModel = LocalAssetViewModelProvider.current
+        val initialTopBarHeight = remember { viewModel.initialTopBarHeight }
+        val initialBottomBarHeight = remember {viewModel.initialBottomBarHeight }
+        Box(
+            modifier = Modifier
+                .background(Color.Gray)
+                .padding(top = initialTopBarHeight.value)
+                .fillMaxSize()
+        ) {
+            AssetContent(viewModel, RequestType.IMAGE, initialBottomBarHeight,navigator)
         }
     }
 
-    val initialTopBarHeight = remember { viewModel.initialTopBarHeight }
-    val initialBottomBarHeight = remember { viewModel.initialBottomBarHeight }
-
-    with(LocalDensity.current) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = Color.Black,
-            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-            topBar = {
-                DisplayTopAppBar(
-                    selectedList = viewModel.selectedList,
-                    navigateUp = onClose, onPicked = onPicked,
-                    initialTopBarHeight = initialTopBarHeight,
-                )
-            },
-            bottomBar = {
-                DisplayBottomBar(
-                    viewModel,
-                    initialBottomBarHeight = initialBottomBarHeight,
-                    navigateToDropDown = navigateToDropDown
-                )
-            }
-        ) {
-            Box(
-                modifier = Modifier
-                    .background(Color.Gray)
-                    .padding(top = initialTopBarHeight.value)
-                    .fillMaxSize()
-            ) {
-                AssetContent(viewModel, RequestType.IMAGE, initialBottomBarHeight)
+    @OptIn(InternalVoyagerApi::class)
+    @Composable
+    override fun modelTopBar(
+        model: AssetDisplayViewModel,
+        navigator: Navigator,
+        topAppBarHeightAssign: MutableState<Dp>
+    ) {
+        val viewModel = LocalAssetViewModelProvider.current
+        BackHandler(enabled = true) {
+            if (viewModel.selectedList.isNotEmpty()) {
+                viewModel.clear()
+            } else {
+                model.onClose(viewModel.selectedList)
             }
         }
+        val scope = rememberCoroutineScope()
+        if (navigator.canPop) {
+            scope.launch {
+                val agree = onBackPressed(model, navigator)
+                if (agree) {
+                    navigator.pop()
+                }
+            }
+        }
+        val initialTopBarHeight = remember { viewModel.initialTopBarHeight }
+        with(LocalDensity.current) {
+            DisplayTopAppBar(
+                selectedList = viewModel.selectedList,
+                navigateUp = model.onClose, onPicked = model.onPicked,
+                initialTopBarHeight = initialTopBarHeight,
+            )
+        }
+
+    }
+
+    @Composable
+    override fun modelBottomBar(model: AssetDisplayViewModel, navigator: Navigator) {
+        val viewModel = LocalAssetViewModelProvider.current
+        val initialBottomBarHeight = remember { viewModel.initialBottomBarHeight }
+        with(LocalDensity.current) {
+            DisplayBottomBar(
+                viewModel,
+                initialBottomBarHeight = initialBottomBarHeight,
+                navigateToDropDown = {
+                    navigator.push(AssetSelectorScreen(it, viewModel.directoryGroup) { name ->
+                        navigator.pop()
+                        viewModel.directory = formatDirectoryName(name) to name
+                    })
+                }
+            )
+        }
+
     }
 
 }
+
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -222,54 +257,6 @@ private fun Density.DisplayTopAppBar(
 
             }
         }
-
-        // todo iOS中的TopAppBar不能正常显示,修改为普通的Box
-        /*CenterAlignedTopAppBar(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .onGloballyPositioned {
-                    val height = it.size.height.toDp()
-                    if (initialTopBarHeight.value < height) {
-                        initialTopBarHeight.value = height
-                    }
-                },
-            navigationIcon = {
-
-            },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                containerColor = Color.Black
-            ),
-            title = {
-                *//*Row(modifier = Modifier.clickable { navigateToDropDown(directory) }) {
-                    Text(text = directory, fontSize = 18.sp, color = Color.White)
-                    Icon(imageVector = Icons.Default.KeyboardArrowDown,
-                        tint = Color.White,
-                        contentDescription = "")
-                }*//*
-            },
-            actions = {
-                Box(
-                    modifier = Modifier
-                        .wrapContentSize()
-                        .background(ButtonDefaults.buttonColors().let {
-                            if (selectedList.isEmpty()) Color.Gray else it.containerColor
-                        }, RoundedCornerShape(3.dp))
-                        .clip(RoundedCornerShape(3.dp))
-                        .clickable(enabled = selectedList.isNotEmpty()) {
-                            onPicked(selectedList)
-                        }
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    val maxAssets = LocalAssetConfig.current.maxAssets
-                    Text(
-                        "完成${selectedList.size}/${maxAssets}",
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 13.sp, color = Color.White
-                    )
-                }
-            }
-        )*/
     }
 }
 
@@ -316,7 +303,8 @@ private fun Density.DisplayBottomBar(
 private fun AssetContent(
     viewModel: AssetViewModel,
     requestType: RequestType,
-    padding: MutableState<Dp>
+    padding: MutableState<Dp>,
+    navigator: Navigator
 ) {
     var assets by remember { mutableStateOf(viewModel.getGroupedAssets(requestType)) }
     val context = LocalPlatformContext.current
@@ -414,11 +402,9 @@ private fun AssetContent(
                             .padding(horizontal = 1.dp, vertical = 1.dp),
                         assetInfo = assetInfo,
                         navigateToPreview = {
-                            viewModel.navigateToPreview(
-                                index - 1,
-                                time,
-                                requestType
-                            )
+                            navigator.push(AssetPreviewScreen(
+                                viewModel = viewModel,
+                                index = (index - 1),time=time,requestType=requestType))
                         },
                         selectedList = viewModel.selectedList,
                         onCameraClicks = {

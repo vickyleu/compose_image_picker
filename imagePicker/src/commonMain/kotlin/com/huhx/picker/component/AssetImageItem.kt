@@ -84,7 +84,6 @@ fun AssetImageItem(
                 }
 //                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
                 .crossfade(true)
-
                 .memoryCacheKey(urlString)
 //                .apply { extras.setAll(screen.image.extras) }
                 .build(),

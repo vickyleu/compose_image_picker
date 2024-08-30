@@ -11,9 +11,12 @@ import coil3.decode.DataSource
 import coil3.decode.ImageSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
+import coil3.fetch.ImageFetchResult
 import coil3.fetch.SourceFetchResult
+import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import coil3.request.Options
+import coil3.size.Dimension
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.provider.AssetLoader
 import com.huhx.picker.provider.AssetLoader.Companion.uriString
@@ -25,7 +28,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,6 +36,7 @@ import okio.BufferedSource
 import okio.FileSystem
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Paint
+import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSData
 import platform.Foundation.NSError
 import platform.Foundation.NSSortDescriptor
@@ -43,11 +46,13 @@ import platform.Foundation.valueForKey
 import platform.Photos.PHAsset
 import platform.Photos.PHAssetMediaTypeImage
 import platform.Photos.PHFetchOptions
+import platform.Photos.PHImageContentModeAspectFill
 import platform.Photos.PHImageManager
 import platform.Photos.PHImageRequestOptions
 import platform.Photos.PHImageRequestOptionsDeliveryModeHighQualityFormat
-import platform.Photos.PHImageRequestOptionsResizeModeExact
+import platform.Photos.PHImageRequestOptionsResizeModeFast
 import platform.UIKit.UIImage
+import platform.UIKit.UIImageJPEGRepresentation
 import platform.UIKit.UIImagePickerController
 import platform.UIKit.UIImagePickerControllerDelegateProtocol
 import platform.UIKit.UIImagePickerControllerOriginalImage
@@ -94,7 +99,7 @@ class ProgressDrawable : DrawableImage() {
 private val fetcherFactory = PHAssetFetcherFactory()
 
 @OptIn(ExperimentalCoilApi::class)
-actual fun ImageRequest.Builder.decoderFactoryPlatform(progress:(Int)->Unit): ImageRequest.Builder {
+actual fun ImageRequest.Builder.decoderFactoryPlatform(progress: (Int) -> Unit): ImageRequest.Builder {
 
     this.listener(onSuccess = { imageRequest, result ->
         progress.invoke(100)
@@ -118,43 +123,60 @@ class PHAssetFetcher(
     private val imageLoader: ImageLoader
 ) : Fetcher {
     internal val progress = mutableStateOf(0)
+
+    @OptIn(ExperimentalCoilApi::class)
     override suspend fun fetch(): FetchResult {
         val uriStr = uri.toString()
         val localIdentifier = uriStr.substring("phasset://".length)
         val bufferedSource: BufferedSource = Buffer()
-        withContext(Dispatchers.IO) {
-            var attempt = 0
-            val maxRetries = 3
-            var imageData: ByteArray? = null
-            while (attempt < maxRetries) {
-                attempt++
-                imageData = withContext(Dispatchers.IO) {
-                    getImageDataFromPHAsset(localIdentifier, options) {
-                        progress.value = it
+        val key = MemoryCache.Key(uriStr)
+        val memoryCache = imageLoader.memoryCache ?: run {
+            throw Exception("MemoryCache is null")
+        }
+        /*return memoryCache[key]?.let {
+            ImageFetchResult(
+                image = it.image,
+                isSampled = false,
+                dataSource = DataSource.MEMORY,
+            )
+        } ?:*/
+        return run {
+
+            withContext(Dispatchers.IO) {
+                println("localIdentifier: $localIdentifier 重复下载?????")
+                var attempt = 0
+                val maxRetries = 3
+                var imageData: ByteArray? = null
+                while (attempt < maxRetries) {
+                    attempt++
+                    imageData = withContext(Dispatchers.IO) {
+                        getImageDataFromPHAsset(localIdentifier, options) {
+                            progress.value = it
+                        }
+                    }
+                    if (imageData != null) {
+                        bufferedSource.buffer.write(imageData)
+                        bufferedSource.buffer.flush()
+                        break
+                    }
+                    if (attempt < maxRetries) {
+                        delay(1000L)  // 等待一秒后重试
                     }
                 }
-                if (imageData != null) {
-                    bufferedSource.buffer.write(imageData)
-                    bufferedSource.buffer.flush()
-                    break
-                }
-                if (attempt < maxRetries) {
-                    delay(1000L)  // 等待一秒后重试
+                if (imageData == null) {
+                    throw Exception("Failed to get image data after $maxRetries attempts")
                 }
             }
-            if (imageData == null) {
-                throw Exception("Failed to get image data after $maxRetries attempts")
-            }
+            SourceFetchResult(
+                source = ImageSource(
+                    source = bufferedSource,
+                    fileSystem = FileSystem.SYSTEM,
+                    metadata = null,
+                ),
+                mimeType = "image/jpeg",
+                dataSource = DataSource.DISK,
+            )
         }
-        return SourceFetchResult(
-            source = ImageSource(
-                source = bufferedSource,
-                fileSystem = FileSystem.SYSTEM,
-                metadata = null,
-            ),
-            mimeType = "image/jpeg",
-            dataSource = DataSource.NETWORK,
-        )
 
     }
 
@@ -162,7 +184,9 @@ class PHAssetFetcher(
 
 @OptIn(ExperimentalForeignApi::class)
 internal suspend fun getImageDataFromPHAsset(
-    localIdentifier: String?, optionsCoil: Options,progressCallback: (Int)->Unit
+    localIdentifier: String?, optionsCoil: Options,
+    cancelToken: Any? = null,
+    progressCallback: (Int) -> Unit
 ): ByteArray? {
     val completer = CompletableDeferred<ByteArray?>()
     withContext(Dispatchers.IO) {
@@ -174,6 +198,8 @@ internal suspend fun getImageDataFromPHAsset(
         val options = PHImageRequestOptions()
         options.networkAccessAllowed = true
         options.synchronous = false
+        options.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat
+        options.resizeMode = PHImageRequestOptionsResizeModeFast
         options.progressHandler = { progress, error, stop, info ->
             val p = (progress * 100f).toInt().coerceIn(0, 100)
             progressCallback.invoke(p)
@@ -184,14 +210,25 @@ internal suspend fun getImageDataFromPHAsset(
             } else if (p == 100) {
             }
         }
-        PHImageManager.defaultManager()
-            .requestImageDataForAsset(asset, options) { data, _, _, _ ->
-                imageData = data?.toByteArray()
+        val size = optionsCoil.size.let {
+            androidx.compose.ui.geometry.Size(
+                (it.width as Dimension.Pixels).px.toFloat(),
+                (it.height as Dimension.Pixels).px.toFloat()
+            )
+        }
+        PHImageManager.defaultManager().requestImageForAsset(asset,
+            targetSize = CGSizeMake(size.width.toDouble(), size.height.toDouble()),
+            contentMode = PHImageContentModeAspectFill,
+            options = options,
+            resultHandler = { image, _ ->
+                imageData = image?.toByteArray()
                 completer.complete(imageData)
             }
+        )
     }
     return completer.await()
 }
+
 @OptIn(ExperimentalForeignApi::class)
 private fun NSData.toByteArray(): ByteArray {
     val byteArray = ByteArray(length.toInt())
@@ -200,6 +237,15 @@ private fun NSData.toByteArray(): ByteArray {
     }
     return byteArray
 }
+
+
+@OptIn(ExperimentalForeignApi::class)
+private fun UIImage.toByteArray(): ByteArray {
+    val nsData = UIImageJPEGRepresentation(this, 1.0)
+    return nsData?.toByteArray() ?: ByteArray(0)
+}
+
+
 class PHAssetFetcherFactory : Fetcher.Factory<Uri> {
 
     override fun create(
@@ -270,7 +316,7 @@ class IOSCameraController(
 
     @OptIn(ExperimentalForeignApi::class)
     private fun saveImageToAlbum(image: UIImage) {
-        UIImageWriteToSavedPhotosAlbum(image, null,null, null)
+        UIImageWriteToSavedPhotosAlbum(image, null, null, null)
         scope.launch {
             withContext(Dispatchers.IO) {
                 delay(300)
@@ -280,12 +326,12 @@ class IOSCameraController(
                 }
             }
         }
-       /*
-       TODO 目前的版本不支持超过三个参数的方法调用
-       UIImageWriteToSavedPhotosAlbum(
-            image, this,
-            NSSelectorFromString("image:didFinishSavingWithError:contextInfo:"), null
-        )*/
+        /*
+        TODO 目前的版本不支持超过三个参数的方法调用
+        UIImageWriteToSavedPhotosAlbum(
+             image, this,
+             NSSelectorFromString("image:didFinishSavingWithError:contextInfo:"), null
+         )*/
     }
 
     @OptIn(BetaInteropApi::class, ExperimentalForeignApi::class)
@@ -319,16 +365,16 @@ class IOSCameraController(
             val fileName = asset.valueForKey("filename") as? String ?: ""
             val mimeType = "image/jpeg" // 根据需要设置MIME类型
             val info = AssetLoader.AssetInfoImpl(
-                    id = asset.localIdentifier,
-                    uriString = NSURL(string = "phasset://${asset.localIdentifier}").uriString,
-                    filename = fileName,
-                    date = asset.creationDate?.timeIntervalSince1970?.toLong()
-                        ?.times(1000) ?: 0L,
-                    mediaType = asset.mediaType.toInt(),
-                    mimeType = mimeType,
-                    duration = asset.duration.toLong(),
-                    directory = "Photo" // iOS上没有直接的文件目录
-                )
+                id = asset.localIdentifier,
+                uriString = NSURL(string = "phasset://${asset.localIdentifier}").uriString,
+                filename = fileName,
+                date = asset.creationDate?.timeIntervalSince1970?.toLong()
+                    ?.times(1000) ?: 0L,
+                mediaType = asset.mediaType.toInt(),
+                mimeType = mimeType,
+                duration = asset.duration.toLong(),
+                directory = "Photo" // iOS上没有直接的文件目录
+            )
             onComplete(info)
 //            val options = PHContentEditingInputRequestOptions()
 //            it.requestContentEditingInputWithOptions(options) { input, _ ->

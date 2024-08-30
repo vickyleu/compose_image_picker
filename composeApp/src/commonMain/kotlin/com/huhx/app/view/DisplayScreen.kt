@@ -6,22 +6,27 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.rememberNavController
 import cafe.adriel.voyager.navigator.Navigator
 import com.github.jing332.filepicker.base.FileImpl
 import com.github.jing332.filepicker.base.inputStream
 import com.github.jing332.filepicker.base.useImpl
-import com.huhx.app.AppRoute
+import com.huhx.app.ImagePicker
 import com.huhx.app.data.MomentModelFactory
 import com.huhx.app.data.MomentRepository
 import com.huhx.app.data.MomentViewModel
 import com.huhx.picker.model.toUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 class DisplayViewModel : BasicViewModel() {
@@ -33,11 +38,27 @@ class DisplayScreen : BasicScreen<DisplayViewModel>(
     @Composable
     override fun modelContent(model: DisplayViewModel, navigator: Navigator, tabbarHeight: Dp) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black).padding(top = tabbarHeight)) {
-            val navController = rememberNavController()
             val viewModel: MomentViewModel = viewModel(
                 factory = MomentModelFactory(momentRepository = MomentRepository())
             )
-            AppRoute(navController = navController, viewModel = viewModel)
+            val scope = rememberCoroutineScope()
+            ImagePicker(
+                onPicked = {
+                    viewModel.selectedList.clear()
+                    viewModel.selectedList.addAll(it)
+
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            delay(500)
+                            viewModel.selectedList.clear()
+                        }
+                    }
+                },
+                onClose = {
+                    viewModel.selectedList.clear()
+
+                }
+            )
             LaunchedEffect(key1 = viewModel) {
                 snapshotFlow { viewModel.selectedList.size }
                     .distinctUntilChanged()

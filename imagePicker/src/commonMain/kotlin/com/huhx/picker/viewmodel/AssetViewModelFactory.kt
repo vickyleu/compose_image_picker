@@ -9,10 +9,9 @@ import kotlin.reflect.KClass
 
 internal class AssetViewModelFactory(
     private val assetPickerRepository: AssetPickerRepository,
-    private val navController: NavController,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: KClass<T>, extras: CreationExtras): T {
-        return AssetViewModel(assetPickerRepository, navController) as T
+        return AssetViewModel(assetPickerRepository) as T
     }
 }

@@ -1,12 +1,15 @@
 package com.huhx.picker.viewmodel
 
+import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
+import cafe.adriel.voyager.navigator.tab.TabNavigator
 import coil3.Uri
 import com.huhx.picker.AssetRoute
 import com.huhx.picker.formatDirectoryName
@@ -19,10 +22,11 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 val init_directory = "所有图片" to "所有图片"
+internal val LocalAssetViewModelProvider: ProvidableCompositionLocal<AssetViewModel> =
+    staticCompositionLocalOf { error("AssetViewModel not initialized") }
 
 internal class AssetViewModel(
     private val assetPickerRepository: AssetPickerRepository,
-    private val navController: NavController,
 ) : ViewModel() {
 
     val initialTopBarHeight = mutableStateOf(40.dp)
@@ -93,9 +97,6 @@ internal class AssetViewModel(
         return selectedIds.any { ids.contains(it) }
     }
 
-    fun navigateToPreview(index: Int, dateString: String, requestType: RequestType) {
-        navController.navigate(AssetRoute.preview(index, dateString, requestType))
-    }
 
     suspend fun deleteImage(cameraUri: Uri?) {
         assetPickerRepository.deleteByUri(cameraUri)

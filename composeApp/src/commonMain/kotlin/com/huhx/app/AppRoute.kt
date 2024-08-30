@@ -19,45 +19,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@Composable
-fun AppRoute(
-    navController: NavHostController,
-    viewModel: MomentViewModel,
-) {
-    NavHost(
-        navController = navController,
-        startDestination = "asset_picker",
-    ) {
-        composable("moment_list") {
-            MomentListScreen(viewModel) { navController.navigate("moment_add") }
-        }
-
-        composable("moment_add") {
-            MomentAddScreen(viewModel, navController, navController::navigateUp)
-        }
-
-        composable("asset_picker") {
-            val scope = rememberCoroutineScope()
-            ImagePicker(
-                onPicked = {
-                    viewModel.selectedList.clear()
-                    viewModel.selectedList.addAll(it)
-                    navController.navigateUp()
-                    scope.launch {
-                        withContext(Dispatchers.IO) {
-                            delay(500)
-                            viewModel.selectedList.clear()
-                        }
-                    }
-                },
-                onClose = {
-                    viewModel.selectedList.clear()
-                    navController.navigateUp()
-                }
-            )
-        }
-    }
-}
 
 @Composable
 fun ImagePicker(

@@ -1,120 +1,51 @@
 package com.huhx.picker
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.navigation.NavHostController
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
 import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
-import cafe.adriel.voyager.navigator.internal.BackHandler
+import cafe.adriel.voyager.navigator.CurrentScreen
+import cafe.adriel.voyager.navigator.Navigator
+import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
+import com.huhx.picker.base.LocalNavigatorController
 import com.huhx.picker.model.AssetInfo
-import com.huhx.picker.model.DateTimeFormatterKMP
 import com.huhx.picker.model.RequestType
 import com.huhx.picker.view.AssetDisplayScreen
-import com.huhx.picker.view.AssetPreviewScreen
-import com.huhx.picker.view.AssetSelectorScreen
 import com.huhx.picker.viewmodel.AssetViewModel
+import com.huhx.picker.viewmodel.LocalAssetViewModelProvider
 
 @OptIn(InternalVoyagerApi::class)
 @Composable
 internal fun AssetPickerRoute(
-    navController: NavHostController,
     viewModel: AssetViewModel,
     onPicked: (List<AssetInfo>) -> Unit,
     onClose: (List<AssetInfo>) -> Unit,
 ) {
-
-    BackHandler(enabled = true, onBack = {
-        val list = mutableListOf<AssetInfo>()
-        list.addAll(viewModel.selectedList)
-        viewModel.selectedList.clear()
-        if (viewModel.selectedList.isNotEmpty()) {
+    CompositionLocalProvider(LocalAssetViewModelProvider provides viewModel) {
+        val startScreen = remember{  AssetDisplayScreen(viewModel = viewModel, onPicked = {
+            val list = mutableListOf<AssetInfo>()
+            list.addAll(viewModel.selectedList)
+            viewModel.selectedList.clear()
             onPicked(list)
-        } else {
-            onPicked(list)
-        }
-    })
-    NavHost(navController = navController, startDestination = AssetRoute.display) {
-        composable(route = AssetRoute.display) {
-            AssetDisplayScreen(
-                viewModel = viewModel,
-                navigateToDropDown = { navController.navigate(AssetRoute.selector(it)) },
-                onPicked = {
-                    val list = mutableListOf<AssetInfo>()
-                    list.addAll(viewModel.selectedList)
-                    viewModel.selectedList.clear()
-                    onPicked(list)
-                },
-                onClose = {
-                    val list = mutableListOf<AssetInfo>()
-                    list.addAll(viewModel.selectedList)
-                    viewModel.selectedList.clear()
-                    onClose(list)
-                },
-            )
-        }
-
-        composable(
-            route = AssetRoute.selector,
-            arguments = listOf(navArgument("directory") { type = NavType.StringType })
-        ) {
-            val directory = (it.arguments)?.getString("directory") ?: ""
-
-            AssetSelectorScreen(
-                directory = directory,
-                assetDirectories = viewModel.directoryGroup,
-                navigateUp = { navController.navigateUp() },
-                onSelected = { name ->
-                    navController.navigateUp()
-                    viewModel.directory = formatDirectoryName(name) to name
-                },
-            )
-        }
-
-        composable(
-            route = AssetRoute.preview,
-            arguments = listOf(
-                navArgument("index") { type = NavType.IntType },
-                navArgument("dateString") { type = NavType.StringType },
-                navArgument("requestType") { type = NavType.StringType },
-            )
-        ) {
-            val arguments = it.arguments
-            val requestType = arguments?.getString("requestType") ?: RequestType.IMAGE.name
-            val assets = viewModel.getGroupedAssets(RequestType.valueOf(requestType))
-            val rawIndex = arguments?.getInt("index", 0) ?: 0
-
-            var index by remember { mutableIntStateOf(rawIndex) }
-
-            val dtf = remember { DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日 HH:mm:ss") }
-            val flattenedList = remember(rawIndex) {
-                assets.toList().sortedByDescending {
-                    dtf.parse(it.first)
-                }.flatMap { (time, list) ->
-                    list.map {
-                        time to it
-                    }.sortedByDescending {
-                        dtf.parse(it.first)
-                    }
-                }
+        }, onClose = {
+            val list = mutableListOf<AssetInfo>()
+            list.addAll(viewModel.selectedList)
+            viewModel.selectedList.clear()
+            onClose(list)
+        }) }
+        Navigator(
+            screen = startScreen,
+            disposeBehavior = NavigatorDisposeBehavior(
+                disposeNestedNavigators = false,
+                disposeSteps = false
+            ),
+            onBackPressed = { currentScreen ->
+                false
             }
-            AssetPreviewScreen(
-                index = index,
-                assets = flattenedList,
-                selectedList = viewModel.selectedList,
-                navigateUp = { navController.navigateUp() },
-                onSelectChanged = { assetInfo ->
-                    viewModel.selectedList.sortBy { asset ->
-                        flattenedList.indexOfFirst { it.second == asset }
-                    }
-                    index = viewModel.selectedList.indexOf(assetInfo)
-                }
-            )
+        ){
+            CompositionLocalProvider(LocalNavigatorController provides it){
+                CurrentScreen()
+            }
         }
     }
 }
