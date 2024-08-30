@@ -7,6 +7,7 @@ import coil3.DrawableImage
 import coil3.ImageLoader
 import coil3.Uri
 import coil3.annotation.ExperimentalCoilApi
+import coil3.asCoilImage
 import coil3.decode.DataSource
 import coil3.decode.ImageSource
 import coil3.fetch.FetchResult
@@ -17,6 +18,7 @@ import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import coil3.request.Options
 import coil3.size.Dimension
+import coil3.size.pxOrElse
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.provider.AssetLoader
 import com.huhx.picker.provider.AssetLoader.Companion.uriString
@@ -128,20 +130,25 @@ class PHAssetFetcher(
     override suspend fun fetch(): FetchResult {
         val uriStr = uri.toString()
         val localIdentifier = uriStr.substring("phasset://".length)
-        val bufferedSource: BufferedSource = Buffer()
-        val key = MemoryCache.Key(uriStr)
-        val memoryCache = imageLoader.memoryCache ?: run {
-            throw Exception("MemoryCache is null")
-        }
-        /*return memoryCache[key]?.let {
-            ImageFetchResult(
-                image = it.image,
-                isSampled = false,
-                dataSource = DataSource.MEMORY,
-            )
-        } ?:*/
-        return run {
-
+        return imageLoader.memoryCache?.let {
+            val memoryCache = it
+            val key = memoryCache.keys.filter { it.key == uriStr }
+            key.mapNotNull {
+                val cache = memoryCache[it]?:return@mapNotNull null
+                val image= cache.image
+                if(image.width==options.size.width.pxOrElse { 0 } && image.height==options.size.height.pxOrElse { 0 }){
+                    val bitmap = image.toBitmap()
+                    if(bitmap.isNull.not() && bitmap.rowBytes>0 ){
+                        return@mapNotNull ImageFetchResult(
+                            image = image,
+                            isSampled = false,
+                            dataSource = DataSource.MEMORY,
+                        )
+                    }else return@mapNotNull null
+                }else  return@mapNotNull null
+            }.firstOrNull()
+        } ?: run {
+            val bufferedSource: BufferedSource = Buffer()
             withContext(Dispatchers.IO) {
                 println("localIdentifier: $localIdentifier 重复下载?????")
                 var attempt = 0
@@ -174,7 +181,7 @@ class PHAssetFetcher(
                     metadata = null,
                 ),
                 mimeType = "image/jpeg",
-                dataSource = DataSource.DISK,
+                dataSource = DataSource.MEMORY,
             )
         }
 
