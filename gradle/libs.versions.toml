@@ -5,18 +5,18 @@ android-minSdk = "24"
 android-compileSdk = "34"
 android-targetSdk = "34"
 
-kotlin = "2.0.10"
-#compose-plugin = "1.6.11"
+kotlin = "2.0.20"
+#noinspection GradleDependency
 compose-plugin = "1.7.0-alpha01"
 
-jetpack-compose-bom = "2024.06.00"
+jetpack-compose-bom = "2024.08.00"
 coroutines-bom = "1.8.1"
 coil-bom = "3.0.0-alpha06"
 jvmTarget = "17"
 
 dokka = "1.9.20"
-media3Exoplayer = "1.4.0"
-media3Ui = "1.4.0"
+media3Exoplayer = "1.4.1"
+media3Ui = "1.4.1"
 navigationCompose = "2.8.0-alpha02"
 accompanist = "0.34.0"
 kotlinxDatetime = "0.6.0"

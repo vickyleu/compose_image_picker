@@ -14,6 +14,7 @@ actual fun PlatformContext.vibration(milliseconds: Long) {
         val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
         vibratorManager.defaultVibrator
     } else {
+        @Suppress("DEPRECATION")
         getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
     }
     vibrator.vibrate(VibrationEffect.createOneShot(milliseconds, VibrationEffect.DEFAULT_AMPLITUDE))

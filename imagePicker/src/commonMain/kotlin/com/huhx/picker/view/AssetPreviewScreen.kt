@@ -37,12 +37,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +69,8 @@ import compose_image_picker.imagepicker.generated.resources.preview_title_image
 import compose_image_picker.imagepicker.generated.resources.preview_title_video
 import compose_image_picker.imagepicker.generated.resources.text_asset_select
 import compose_image_picker.imagepicker.generated.resources.text_done
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -87,9 +91,51 @@ fun AssetPreviewScreen(
     val pageState = key(assets) {
         rememberPagerState(initialPage = index, pageCount = assets::size)
     }
+    var pageIndex by remember { mutableStateOf(pageState.currentPage) }
+
+
+    println("pageIndex::::====>>$pageIndex")
+
 
     val scope = rememberCoroutineScope()
-    val (dateString, assetInfo) = assets[pageState.currentPage]
+//    val (dateString, assetInfo) = assets[pageIndex]
+    val assetInfo = remember {
+        val (_, assetInfo) = assets[pageIndex]
+        mutableStateOf(assetInfo)
+    }
+
+    LaunchedEffect(Unit){
+        snapshotFlow { pageIndex }
+            .distinctUntilChanged()
+            .collect{
+                assetInfo.value = assets[it].second
+            }
+    }
+
+    val dateStringState = remember {
+        mutableStateOf(DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日 HH:mm:ss")
+            .format(Instant.fromEpochMilliseconds(assetInfo.value.date).toLocalDateTime(TimeZone.UTC)))
+    }
+
+    LaunchedEffect(Unit){
+        snapshotFlow { assetInfo.value }
+            .distinctUntilChanged()
+            .collect{
+                dateStringState.value = DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日 HH:mm:ss")
+                    .format(Instant.fromEpochMilliseconds(it.date).toLocalDateTime(TimeZone.UTC))
+            }
+    }
+
+    LaunchedEffect(Unit){
+        snapshotFlow { pageState.currentPage }
+            .distinctUntilChanged()
+            .collect {
+                pageIndex = it
+            }
+    }
+
+
+
 
     Scaffold(
         topBar = {
@@ -133,7 +179,7 @@ fun AssetPreviewScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = if (assetInfo.isImage()) {
+                                text = if (assetInfo.value.isImage()) {
                                     stringResource(Res.string.preview_title_image)
                                 } else {
                                     stringResource(Res.string.preview_title_video)
@@ -143,14 +189,7 @@ fun AssetPreviewScreen(
                                     color = Color.White
                                 )
                             )
-                            val dateStringState = remember(assetInfo.date) {
-                                val localDateTime = Instant.fromEpochMilliseconds(assetInfo.date)
-                                    .toLocalDateTime(TimeZone.UTC)
-                                val ds =
-                                    DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日 HH:mm:ss")
-                                        .format(localDateTime)
-                                mutableStateOf(ds)
-                            }
+
 
                             Text(
                                 text = dateStringState.value,
@@ -171,7 +210,7 @@ fun AssetPreviewScreen(
                             Text(
                                 modifier = Modifier.wrapContentHeight().wrapContentWidth()
                                     .padding(horizontal = 4.dp),
-                                text = "${pageState.currentPage + 1}/${assets.size}",
+                                text = "${pageIndex + 1}/${assets.size}",
                                 style = MaterialTheme.typography.bodyLarge.copy(
                                     fontSize = 18.sp,
                                     color = Color.White
@@ -201,7 +240,7 @@ fun AssetPreviewScreen(
             )*/
         },
         bottomBar = {
-            SelectorBottomBar(selectedList = selectedList, assetInfo = assetInfo) {
+            SelectorBottomBar(selectedList = selectedList, assetInfo = assetInfo.value) {
                 navigateUp()
                 if (selectedList.isEmpty()) selectedList.add(it)
             }
@@ -227,7 +266,7 @@ fun AssetPreviewScreen(
                     itemsIndexed(selectedList) { _, resource ->
                         SelectedAssetImageItem(
                             assetInfo = resource,
-                            isSelected = resource.id == assetInfo.id,
+                            isSelected = resource.id == assetInfo.value.id,
                             resourceType = resource.resourceType,
                             durationString = resource.formatDuration(),
                             modifier = Modifier.size(64.dp),

@@ -34,7 +34,7 @@ plugins {
     alias(libs.plugins.android.application).apply(false) //.get().pluginId
     alias(libs.plugins.android.library).apply(false)
     alias(libs.plugins.kotlin.multiplatform).apply(false)
-    alias(libs.plugins.jetbrains.compose).apply(false)
+//    alias(libs.plugins.jetbrains.compose).apply(false)
     alias(libs.plugins.compose.compiler).apply(false)
     alias(libs.plugins.kotlin.parcelize).apply(false)
     alias(libs.plugins.dokka)
@@ -82,6 +82,7 @@ buildscript {
     dependencies {
         val dokkaVersion = libs.versions.dokka.get()
         classpath("org.jetbrains.dokka:dokka-base:$dokkaVersion")
+        classpath("org.jetbrains.compose:compose-gradle-plugin:${libs.versions.compose.plugin.get()}")
     }
 }
 

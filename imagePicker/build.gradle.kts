@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
-    alias(libs.plugins.jetbrains.compose)
+    id(libs.plugins.jetbrains.compose.get().pluginId)
     alias(libs.plugins.compose.compiler)
 }
 
