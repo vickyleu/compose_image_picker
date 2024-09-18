@@ -58,7 +58,6 @@ import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.AsyncImagePainter.State.Empty.painter
 import coil3.compose.LocalPlatformContext
-import coil3.networkObserverEnabled
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.huhx.picker.base.BasicScreen

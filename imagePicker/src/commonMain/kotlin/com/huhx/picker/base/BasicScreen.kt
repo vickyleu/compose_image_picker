@@ -35,6 +35,7 @@ import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
+import cafe.adriel.voyager.core.stack.StackEvent
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
 import cafe.adriel.voyager.navigator.internal.BackHandler
@@ -184,44 +185,44 @@ internal abstract class BasicScreen<T : BasicViewModel>(
         return true
     }
 
-    override fun enter(): EnterTransition? = if (try {
-            _isTransitionOpen
-        } catch (e: Exception) {
-            false
-        }
-    ) slideInHorizontally(
-        animationSpec = tween(500),
-        initialOffsetX = {
-            it
-        }
-    ) + fadeIn(
-        animationSpec = tween(500)
-    ) else null
+    override fun enter(lastEvent: StackEvent): EnterTransition? {
+       return if (try {
+                _isTransitionOpen
+            } catch (e: Exception) {
+                false
+            }
+        ) slideInHorizontally(
+            animationSpec = tween(500),
+            initialOffsetX = {
+                it
+            }
+        ) + fadeIn(
+            animationSpec = tween(500)
+        ) else null
+    }
+
 
 
     @Transient
     private val isInTransition = mutableStateOf(false)
 
-    override fun exit(): ExitTransition? = (if (try {
-            _isTransitionOpen
-        } catch (e: Exception) {
-            false
-        }
-    ) {
-        (slideOutHorizontally(
-            animationSpec = tween(500),
-            targetOffsetX = {
-                it
+    override fun exit(lastEvent: StackEvent): ExitTransition? {
+        return (if (try {
+                _isTransitionOpen
+            } catch (e: Exception) {
+                false
             }
-        ) + fadeOut(
-            animationSpec = tween(500)
-        )).apply {
-            //
-        }
-    } else null).apply {
-//        this@BasicScreen.recycle()//TODO
+        ) {
+            (slideOutHorizontally(
+                animationSpec = tween(500),
+                targetOffsetX = {
+                    it
+                }
+            ) + fadeOut(
+                animationSpec = tween(500)
+            ))
+        } else null)
     }
-
 
     final fun transitionAnimation(enable: Boolean) {
         _isTransitionOpen = enable

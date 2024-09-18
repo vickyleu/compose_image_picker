@@ -3,11 +3,9 @@ package com.huhx.picker.view
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import coil3.DrawableImage
 import coil3.ImageLoader
 import coil3.Uri
 import coil3.annotation.ExperimentalCoilApi
-import coil3.asCoilImage
 import coil3.decode.DataSource
 import coil3.decode.ImageSource
 import coil3.fetch.FetchResult
@@ -19,6 +17,7 @@ import coil3.request.ImageRequest
 import coil3.request.Options
 import coil3.size.Dimension
 import coil3.size.pxOrElse
+import coil3.toBitmap
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.provider.AssetLoader
 import com.huhx.picker.provider.AssetLoader.Companion.uriString
@@ -73,30 +72,6 @@ actual fun VideoPreview(
 ) {
 }
 
-@OptIn(ExperimentalCoilApi::class)
-class ProgressDrawable : DrawableImage() {
-    private val paint = Paint().apply {
-        isAntiAlias = true
-    }
-    var progress: Float = 0f
-        set(value) {
-            field = value
-        }
-    override val height: Int
-        get() = TODO("Not yet implemented")
-    override val shareable: Boolean
-        get() = TODO("Not yet implemented")
-    override val size: Long
-        get() = TODO("Not yet implemented")
-    override val width: Int
-        get() = TODO("Not yet implemented")
-
-    override fun Canvas.onDraw() {
-        TODO("Not yet implemented")
-    }
-
-
-}
 
 private val fetcherFactory = PHAssetFetcherFactory()
 
@@ -150,7 +125,6 @@ class PHAssetFetcher(
         } ?: run {
             val bufferedSource: BufferedSource = Buffer()
             withContext(Dispatchers.IO) {
-                println("localIdentifier: $localIdentifier 重复下载?????")
                 var attempt = 0
                 val maxRetries = 3
                 var imageData: ByteArray? = null
