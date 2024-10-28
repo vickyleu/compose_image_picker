@@ -1,17 +1,18 @@
 [versions]
-agp = "8.7.0"
+agp = "8.7.1"
 
 android-minSdk = "24"
 android-compileSdk = "34"
 android-targetSdk = "34"
 
+constraintlayout = "2.1.4"
 kotlin = "2.0.20"
 #noinspection GradleDependency
-compose-plugin = "1.7.0-rc01"
+compose-plugin = "1.7.0"
 
-jetpack-compose-bom = "2024.09.03"
+jetpack-compose-bom = "2024.10.00"
 coroutines-bom = "1.9.0"
-coil-bom = "3.0.0-alpha10"
+coil-bom = "3.0.0-rc01"
 jvmTarget = "17"
 
 dokka = "1.9.20"
@@ -20,9 +21,10 @@ media3Ui = "1.4.1"
 navigationCompose = "2.8.0-alpha02"
 accompanist = "0.34.0"
 kotlinxDatetime = "0.6.0"
-compose-voyager = "1.1.0-beta02"
+compose-voyager = "1.1.0-beta03"
 
 [libraries]
+androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
 compose-filepicker = { module = "com.vickyleu.filepicker:filepicker", version = "1.0.2" }
 
 

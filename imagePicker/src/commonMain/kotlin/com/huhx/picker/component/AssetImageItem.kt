@@ -25,11 +25,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.key.Key.Companion.R
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.annotation.ExperimentalCoilApi
@@ -124,13 +127,20 @@ fun AssetImageItem(
         }
 
         if (resourceType == AssetResourceType.VIDEO) {
+            // 字幕字体阴影
+            val shadow = Shadow(
+                color = Color.Black, // 阴影颜色
+                offset = Offset(2f, 2f), // 阴影偏移
+                blurRadius = 4f // 阴影模糊程度
+            )
             Text(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(bottom = 6.dp, end = 6.dp),
                 text = durationString ?: "00:00",
                 color = Color.White,
-                fontSize = 14.sp
+                fontSize = 14.sp,
+                style = TextStyle(shadow = shadow) // 应用阴影
             )
         }
 

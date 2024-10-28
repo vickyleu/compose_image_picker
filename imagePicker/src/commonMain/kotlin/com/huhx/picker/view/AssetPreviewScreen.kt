@@ -52,11 +52,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.Navigator
-import coil3.EventListener
-import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
-import coil3.compose.AsyncImagePainter.State.Empty.painter
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -112,14 +109,12 @@ internal class AssetPreviewScreen(
         tabbarHeight: Dp
     ) {
         var index by remember { mutableIntStateOf(model.index) }
-        println("AssetPreviewScreen indexindex=>> ${model.index}")
         val assets = remember(model.index) { model.assets }
         val pageState = rememberPagerState(pageCount = assets::size)
         LaunchedEffect(assets.size) {
             pageState.scrollToPage(index.coerceIn(0, assets.size - 1))
         }
         var pageIndex by remember { model.pageIndex }
-        println("AssetPreviewScreen pageIndex::::====>>$pageIndex")
         val scope = rememberCoroutineScope()
         val assetInfo = remember { model.assetInfo }
         LaunchedEffect(Unit) {
@@ -129,7 +124,6 @@ internal class AssetPreviewScreen(
                     assetInfo.value = assets[it].second
                 }
         }
-
         val dateStringState = remember {
             mutableStateOf(
                 DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日 HH:mm:ss")
@@ -161,7 +155,6 @@ internal class AssetPreviewScreen(
                 }
                 .distinctUntilChanged()
                 .collect {
-                    println("AssetPreviewScreen currentPage=====>> $it")
                     pageIndex = it
                 }
         }
@@ -314,30 +307,40 @@ internal class AssetPreviewScreen(
     }
 
     @Composable
-    override fun modelBottomBar(model: AssetPreviewViewModel, navigator: Navigator) {
+    override fun modelBottomBar(
+        model: AssetPreviewViewModel,
+        navigator: Navigator,
+        bottomBarHeightAssign: MutableState<Dp>
+    ) {
         val viewModel = LocalAssetViewModelProvider.current
-        SelectorBottomBar(
-            selectedList = viewModel.selectedList,
-            assetInfo = model.assetInfo.value
-        ) {
-            navigator.pop()
-            if (viewModel.selectedList.isEmpty()) viewModel.selectedList.add(it)
+        with(LocalDensity.current){
+            SelectorBottomBar(
+                Modifier.onGloballyPositioned {
+                    bottomBarHeightAssign.value = it.size.height.toDp()
+                },
+                selectedList = viewModel.selectedList,
+                assetInfo = model.assetInfo.value
+            ) {
+                navigator.pop()
+                if (viewModel.selectedList.isEmpty()) viewModel.selectedList.add(it)
+            }
         }
+
     }
 }
 
 @Composable
 fun SelectorBottomBar(
+    modifier: Modifier = Modifier,
     assetInfo: AssetInfo,
     selectedList: SnapshotStateList<AssetInfo>,
     onClick: (AssetInfo) -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier.then(Modifier.fillMaxWidth()
             .background(color = Color.Black.copy(alpha = 0.9F))
             .padding(bottom =  getNavigationBarHeight())
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp)),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -400,7 +403,7 @@ private fun AssetPreview(assets: List<Pair<String, AssetInfo>>, pagerState: Page
                 }
             }
         } else {
-            VideoPreview(uriString = asset.uriString)
+            VideoPreview(uriString = asset.uriString, modifier = Modifier)
         }
     }
 }

@@ -103,7 +103,6 @@ import kotlinx.coroutines.withContext
                     val indexFilepath = it.getColumnIndex(projection[8])
 
                     while (it.moveToNext()) {
-
                         val id = it.getLong(indexId)
                         val mediaType = it.getInt(indexMediaType)
                         val contentUri =

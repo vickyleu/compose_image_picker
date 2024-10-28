@@ -12,10 +12,10 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -38,14 +38,9 @@ import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.core.stack.StackEvent
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
-import cafe.adriel.voyager.navigator.internal.BackHandler
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import cafe.adriel.voyager.transitions.ScreenTransition
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.jvm.Transient
 
 internal expect interface BasicScreenSerializer
@@ -99,6 +94,7 @@ internal abstract class BasicScreen<T : BasicViewModel>(
         with(LocalDensity.current) {
 
             val topAppBarHeightAssign = remember { mutableStateOf(0.dp) }
+            val bottomBarHeightAssign = remember { mutableStateOf(0.dp) }
             Scaffold(
                 modifier = Modifier.fillMaxSize().background(Color.Transparent),
                 contentColor = Color.Transparent,
@@ -109,8 +105,10 @@ internal abstract class BasicScreen<T : BasicViewModel>(
                 },
                 content = {
                     val tabbarHeight = topAppBarHeightAssign.value
+                    val bottomBarHeight = bottomBarHeightAssign.value
                     BoxWithConstraints(
                         Modifier
+                            .padding(bottom = bottomBarHeight)
                             .fillMaxSize()
                             .background(Color.Transparent)
                     ) {
@@ -118,7 +116,7 @@ internal abstract class BasicScreen<T : BasicViewModel>(
                     }
                 },
                 bottomBar = {
-                    modelBottomBar(screenModel as T, navigator)
+                    modelBottomBar(screenModel as T, navigator,bottomBarHeightAssign)
                 }
             )
         }
@@ -161,7 +159,7 @@ internal abstract class BasicScreen<T : BasicViewModel>(
     abstract fun modelContent(model: T, navigator: Navigator, tabbarHeight: Dp)
 
     @Composable
-    open fun modelBottomBar(model: T, navigator: Navigator) {
+    open fun modelBottomBar(model: T, navigator: Navigator, bottomBarHeightAssign: MutableState<Dp>) {
     }
 
     @Composable

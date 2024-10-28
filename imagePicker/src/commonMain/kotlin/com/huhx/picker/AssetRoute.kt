@@ -9,6 +9,7 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
 import com.huhx.picker.base.LocalNavigatorController
 import com.huhx.picker.model.AssetInfo
+import com.huhx.picker.model.AssetPickerConfig
 import com.huhx.picker.model.RequestType
 import com.huhx.picker.view.AssetDisplayScreen
 import com.huhx.picker.viewmodel.AssetViewModel
@@ -20,6 +21,7 @@ internal fun AssetPickerRoute(
     viewModel: AssetViewModel,
     onPicked: (List<AssetInfo>) -> Unit,
     onClose: (List<AssetInfo>) -> Unit,
+    assetPickerConfig: AssetPickerConfig
 ) {
     CompositionLocalProvider(LocalAssetViewModelProvider provides viewModel) {
         val startScreen = remember{  AssetDisplayScreen(viewModel = viewModel, onPicked = {
@@ -32,7 +34,7 @@ internal fun AssetPickerRoute(
             list.addAll(viewModel.selectedList)
             viewModel.selectedList.clear()
             onClose(list)
-        }) }
+        }, assetPickerConfig = assetPickerConfig) }
         Navigator(
             screen = startScreen,
             disposeBehavior = NavigatorDisposeBehavior(

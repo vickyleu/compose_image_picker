@@ -129,8 +129,12 @@ actual abstract class AssetLoader {
                     fetchedAssets.enumerateObjectsUsingBlock { asset, _, _ ->
                         if (asset !is PHAsset) return@enumerateObjectsUsingBlock
                         val fileName = asset.valueForKey("filename") as? String ?: ""
-
-                        val mimeType = "image/jpeg" // 根据需要设置MIME类型
+                        val mimeType = when(asset.mediaType){
+                            PHAssetMediaTypeImage -> "image/jpeg"
+                            PHAssetMediaTypeVideo -> "video/mp4"
+                            else -> "image/jpeg"
+                        }// 根据需要设置MIME类型
+//                            val mimeType = "image/jpeg"
                         assets.add(
                             AssetInfoImpl(
                                 id = asset.localIdentifier,
@@ -145,7 +149,8 @@ actual abstract class AssetLoader {
                             )
                         )
                     }
-                } else {
+                }
+                else {
                     // 获取相册集合
                     val collections = PHAssetCollection.fetchAssetCollectionsWithType(
                         PHAssetCollectionTypeSmartAlbum,
@@ -160,7 +165,13 @@ actual abstract class AssetLoader {
                         fetchedAssets.enumerateObjectsUsingBlock { asset, _, _ ->
                             if (asset !is PHAsset) return@enumerateObjectsUsingBlock
                             val fileName = asset.valueForKey("filename") as? String ?: ""
-                            val mimeType = "image/jpeg" // 根据需要设置MIME类型
+
+                            val mimeType = when(asset.mediaType){
+                                PHAssetMediaTypeImage -> "image/jpeg"
+                                PHAssetMediaTypeVideo -> "video/mp4"
+                                else -> "image/jpeg"
+                            }// 根据需要设置MIME类型
+//                            val mimeType = "image/jpeg"
                             assets.add(
                                 AssetInfoImpl(
                                     id = asset.localIdentifier,

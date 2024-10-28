@@ -70,6 +70,7 @@ actual fun VideoPreview(
     uriString: String,
     loading: @Composable (() -> Unit)?
 ) {
+
 }
 
 
@@ -184,9 +185,7 @@ internal suspend fun getImageDataFromPHAsset(
         options.progressHandler = { progress, error, stop, info ->
             val p = (progress * 100f).toInt().coerceIn(0, 100)
             progressCallback.invoke(p)
-            println("下载进度: ${p}")
             if (error != null) {
-                println("下载进度: ${p} error:${error}")
                 completer.complete(null)
             } else if (p == 100) {
             }

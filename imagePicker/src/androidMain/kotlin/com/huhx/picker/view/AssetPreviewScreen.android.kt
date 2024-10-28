@@ -1,6 +1,8 @@
 package com.huhx.picker.view
 
 import android.os.Build
+import android.view.LayoutInflater
+import android.view.View
 import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -16,10 +18,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import coil3.compose.LocalPlatformContext
-import coil3.decode.Decoder
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.request.ImageRequest
+import com.huhx.picker.R
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -37,7 +39,6 @@ actual fun VideoPreview(
                 MediaItem.fromUri(uriString)
             )
             setMediaSource(source)
-
             prepare()
         }
     }
@@ -58,15 +59,21 @@ actual fun VideoPreview(
             .then(modifier),
         factory = {
             PlayerView(it).apply {
-                this.player = player
-                setShowPreviousButton(false)
-                setShowNextButton(false)
-                setShowFastForwardButton(false)
-                setShowRewindButton(false)
-                setShowSubtitleButton(false)
-            }
+                    this.player = player
+                    setShowPreviousButton(false)
+                    setShowNextButton(false)
+                    setShowFastForwardButton(false)
+                    setShowRewindButton(false)
+                    setShowSubtitleButton(false)
+                    setShowVrButton(false)
+                    setShowShuffleButton(false)
+                    findViewById<View>(androidx.media3.ui.R.id.exo_settings).visibility = View.GONE
+                }
         })
 }
-actual fun ImageRequest. Builder.decoderFactoryPlatform(progress:(Int)->Unit): ImageRequest.Builder{
-    return if (Build.VERSION.SDK_INT >= 28) decoderFactory(AnimatedImageDecoder.Factory()) else decoderFactory(GifDecoder.Factory())
+
+actual fun ImageRequest.Builder.decoderFactoryPlatform(progress: (Int) -> Unit): ImageRequest.Builder {
+    return if (Build.VERSION.SDK_INT >= 28) decoderFactory(AnimatedImageDecoder.Factory()) else decoderFactory(
+        GifDecoder.Factory()
+    )
 }

@@ -78,6 +78,7 @@ kotlin {
             implementation(libs.accompanist.permissions)
             implementation(libs.coil.video)
             implementation(libs.coil.gif)
+            implementation(libs.androidx.constraintlayout)
         }
 
         iosMain.get().apply {

@@ -62,6 +62,7 @@ fun AssetPicker(
                     viewModel = viewModel,
                     onPicked = onPicked,
                     onClose = onClose,
+                    assetPickerConfig = assetPickerConfig
                 )
             }
         }

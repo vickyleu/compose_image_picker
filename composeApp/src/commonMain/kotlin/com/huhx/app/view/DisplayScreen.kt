@@ -45,6 +45,7 @@ class DisplayScreen : BasicScreen<DisplayViewModel>(
             ImagePicker(
                 onPicked = {
                     viewModel.selectedList.clear()
+                    println("ImagePicker onPicked:${it.size}")
                     viewModel.selectedList.addAll(it)
 
                     scope.launch {

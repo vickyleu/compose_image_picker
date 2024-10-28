@@ -69,6 +69,7 @@ import com.huhx.picker.base.BasicScreen
 import com.huhx.picker.component.AssetImageItem
 import com.huhx.picker.formatDirectoryName
 import com.huhx.picker.model.AssetInfo
+import com.huhx.picker.model.AssetPickerConfig
 import com.huhx.picker.model.DateTimeFormatterKMP
 import com.huhx.picker.model.RequestType
 import com.huhx.picker.model.page.AssetDisplayViewModel
@@ -94,12 +95,14 @@ import org.jetbrains.compose.resources.painterResource
 internal class AssetDisplayScreen(
     onClose: (List<AssetInfo>) -> Unit,
     onPicked: (List<AssetInfo>) -> Unit,
-    viewModel: AssetViewModel
+    viewModel: AssetViewModel,
+    assetPickerConfig: AssetPickerConfig
 ) : BasicScreen<AssetDisplayViewModel>(create = {
     AssetDisplayViewModel(
         viewModel,
         onPicked,
-        onClose
+        onClose,
+        assetPickerConfig
     )
 }) {
 
@@ -130,7 +133,10 @@ internal class AssetDisplayScreen(
                 .padding(top = initialTopBarHeight.value)
                 .fillMaxSize()
         ) {
-            AssetContent(viewModel, RequestType.IMAGE, initialBottomBarHeight,navigator)
+
+            AssetContent(viewModel,
+                model.assetPickerConfig.requestType,
+                initialBottomBarHeight,navigator)
         }
     }
 
@@ -170,7 +176,11 @@ internal class AssetDisplayScreen(
     }
 
     @Composable
-    override fun modelBottomBar(model: AssetDisplayViewModel, navigator: Navigator) {
+    override fun modelBottomBar(
+        model: AssetDisplayViewModel,
+        navigator: Navigator,
+        bottomBarHeightAssign: MutableState<Dp>
+    ) {
         val viewModel = LocalAssetViewModelProvider.current
         val initialBottomBarHeight = remember { viewModel.initialBottomBarHeight }
         with(LocalDensity.current) {

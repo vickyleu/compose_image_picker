@@ -34,6 +34,7 @@ import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
+import cafe.adriel.voyager.core.stack.StackEvent
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
 import cafe.adriel.voyager.navigator.internal.BackHandler
@@ -203,7 +204,7 @@ abstract class BasicScreen<T : BasicViewModel>(
         return true
     }
 
-    override fun enter(): EnterTransition? = if (try {
+    override fun enter(lastEvent: StackEvent): EnterTransition? = if (try {
             _isTransitionOpen
         } catch (e: Exception) {
             false
@@ -217,7 +218,7 @@ abstract class BasicScreen<T : BasicViewModel>(
         animationSpec = tween(500)
     ) else null
 
-    override fun exit(): ExitTransition? = (if (try {
+    override fun exit(lastEvent: StackEvent): ExitTransition? = (if (try {
             _isTransitionOpen
         } catch (e: Exception) {
             false
