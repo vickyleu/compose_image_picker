@@ -1,12 +1,12 @@
 package com.huhx.picker.view
 
 import android.os.Build
-import android.view.LayoutInflater
 import android.view.View
 import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -21,15 +21,18 @@ import coil3.compose.LocalPlatformContext
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.request.ImageRequest
-import com.huhx.picker.R
 
 @OptIn(UnstableApi::class)
 @Composable
 actual fun VideoPreview(
     modifier: Modifier,
     uriString: String,
-    loading: @Composable (() -> Unit)?
-) {
+    isPlaying: MutableState<Boolean>,
+    isLoaded: MutableState<Boolean>,
+    position: MutableState<Long>,
+    duration: MutableState<Long>,
+    isCurrentPage: Boolean,
+):PlayCallback {
     val context = LocalPlatformContext.current
 
     val player = remember {
@@ -41,10 +44,6 @@ actual fun VideoPreview(
             setMediaSource(source)
             prepare()
         }
-    }
-
-    if (loading != null && player.isLoading) {
-        loading()
     }
 
     DisposableEffect(Unit) {
@@ -59,16 +58,16 @@ actual fun VideoPreview(
             .then(modifier),
         factory = {
             PlayerView(it).apply {
-                    this.player = player
-                    setShowPreviousButton(false)
-                    setShowNextButton(false)
-                    setShowFastForwardButton(false)
-                    setShowRewindButton(false)
-                    setShowSubtitleButton(false)
-                    setShowVrButton(false)
-                    setShowShuffleButton(false)
-                    findViewById<View>(androidx.media3.ui.R.id.exo_settings).visibility = View.GONE
-                }
+                this.player = player
+                setShowPreviousButton(false)
+                setShowNextButton(false)
+                setShowFastForwardButton(false)
+                setShowRewindButton(false)
+                setShowSubtitleButton(false)
+                setShowVrButton(false)
+                setShowShuffleButton(false)
+                findViewById<View>(androidx.media3.ui.R.id.exo_settings).visibility = View.GONE
+            }
         })
 }
 

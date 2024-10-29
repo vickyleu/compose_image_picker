@@ -4,6 +4,7 @@ import coil3.PlatformContext
 import coil3.Uri
 import coil3.toUri
 import com.huhx.picker.model.AssetInfo
+import com.huhx.picker.model.MediaStoreKMP
 import com.huhx.picker.model.RequestType
 import com.huhx.picker.model.toUri
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -40,6 +41,15 @@ import platform.Photos.requestContentEditingInputWithOptions
 actual abstract class AssetLoader {
 
     actual companion object {
+        private val platform.Photos.PHAssetMediaType.convertMediaType: Int
+            get() {
+                return when (this) {
+                    PHAssetMediaTypeImage -> MediaStoreKMP.Files.FileColumns.MEDIA_TYPE_IMAGE
+                    PHAssetMediaTypeVideo -> MediaStoreKMP.Files.FileColumns.MEDIA_TYPE_VIDEO
+                    else -> MediaStoreKMP.Files.FileColumns.MEDIA_TYPE_IMAGE
+                }
+            }
+
         private fun Uri.toNativeUri(): NSURL {
             return NSURL(string = this.path!!)
         }
@@ -90,9 +100,9 @@ actual abstract class AssetLoader {
                 uriString = NSURL(string = "phasset://${asset.localIdentifier}").uriString,
                 filename = fileName,
                 date = asset.creationDate?.timeIntervalSince1970?.toLong() ?: 0L,
-                mediaType = asset.mediaType.toInt(),
+                mediaType = asset.mediaType.convertMediaType,
                 mimeType = mimeType,
-                duration = asset.duration.toLong(),
+                duration = (asset.duration*1000F).toLong(),
                 directory = "Photo", // iOS上没有直接的文件目录
             )
         }
@@ -142,9 +152,9 @@ actual abstract class AssetLoader {
                                 filename = fileName,
                                 date = asset.creationDate?.timeIntervalSince1970?.toLong()
                                     ?.times(1000) ?: 0L,
-                                mediaType = asset.mediaType.toInt(),
+                                mediaType = asset.mediaType.convertMediaType,
                                 mimeType = mimeType,
-                                duration = asset.duration.toLong(),
+                                duration = (asset.duration*1000F).toLong(),
                                 directory = "Photo",// iOS上没有直接的文件目录
                             )
                         )
@@ -172,6 +182,10 @@ actual abstract class AssetLoader {
                                 else -> "image/jpeg"
                             }// 根据需要设置MIME类型
 //                            val mimeType = "image/jpeg"
+                            if(mimeType=="video/mp4"){
+                                println("asset.duration::fileName:$fileName   ${asset.duration}")
+                            }
+
                             assets.add(
                                 AssetInfoImpl(
                                     id = asset.localIdentifier,
@@ -179,9 +193,9 @@ actual abstract class AssetLoader {
                                     filename = fileName,
                                     date = asset.creationDate?.timeIntervalSince1970?.toLong()
                                         ?.times(1000) ?: 0L,
-                                    mediaType = asset.mediaType.toInt(),
+                                    mediaType = asset.mediaType.convertMediaType,
                                     mimeType = mimeType,
-                                    duration = asset.duration.toLong(),
+                                    duration = (asset.duration*1000F).toLong(),
                                     directory = collectionName, // iOS上没有直接的文件目录
                                 )
                             )

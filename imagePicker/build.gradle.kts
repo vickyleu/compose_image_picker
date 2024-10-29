@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -40,7 +41,13 @@ kotlin {
         }
     }
 
-
+    targets.withType<KotlinNativeTarget> {
+        compilations.getByName("main") {
+            cinterops.create("observer") {
+                definitionFile = projectDir.resolve("src/nativeInterop/cinterop/observer.def")
+            }
+        }
+    }
     sourceSets {
         commonMain.get().apply {
             resources.srcDir("src/commonMain/composeResources")
@@ -84,6 +91,9 @@ kotlin {
         iosMain.get().apply {
         }
     }
+
+
+
 }
 
 android {

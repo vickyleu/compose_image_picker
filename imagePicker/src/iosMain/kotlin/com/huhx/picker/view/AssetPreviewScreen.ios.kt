@@ -1,8 +1,23 @@
 package com.huhx.picker.view
 
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.viewinterop.UIKitInteropProperties
+import androidx.compose.ui.viewinterop.UIKitView
 import coil3.ImageLoader
 import coil3.Uri
 import coil3.annotation.ExperimentalCoilApi
@@ -12,7 +27,6 @@ import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.fetch.SourceFetchResult
-import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import coil3.request.Options
 import coil3.size.Dimension
@@ -22,36 +36,73 @@ import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.provider.AssetLoader
 import com.huhx.picker.provider.AssetLoader.Companion.uriString
 import kotlinx.cinterop.BetaInteropApi
+import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.useContents
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import observer.ObserverProtocol
 import okio.Buffer
 import okio.BufferedSource
 import okio.FileSystem
-import org.jetbrains.skia.Canvas
-import org.jetbrains.skia.Paint
+import platform.AVFoundation.AVLayerVideoGravityResizeAspectFill
+import platform.AVFoundation.AVPlayer
+import platform.AVFoundation.AVPlayerItem
+import platform.AVFoundation.AVPlayerItemDidPlayToEndTimeNotification
+import platform.AVFoundation.AVPlayerItemFailedToPlayToEndTimeNotification
+import platform.AVFoundation.AVPlayerItemStatusFailed
+import platform.AVFoundation.AVPlayerLayer
+import platform.AVFoundation.AVPlayerTimeControlStatusPaused
+import platform.AVFoundation.AVPlayerTimeControlStatusPlaying
+import platform.AVFoundation.AVPlayerTimeControlStatusWaitingToPlayAtSpecifiedRate
+import platform.AVFoundation.AVURLAsset
+import platform.AVFoundation.addPeriodicTimeObserverForInterval
+import platform.AVFoundation.currentItem
+import platform.AVFoundation.duration
+import platform.AVFoundation.pause
+import platform.AVFoundation.playImmediatelyAtRate
+import platform.AVFoundation.removeTimeObserver
+import platform.AVFoundation.replaceCurrentItemWithPlayerItem
+import platform.AVFoundation.seekToTime
+import platform.AVFoundation.timeControlStatus
+import platform.AVKit.AVPlayerViewController
+import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSizeMake
+import platform.CoreMedia.CMTimeMake
+import platform.CoreMedia.CMTimeMakeWithSeconds
 import platform.Foundation.NSData
 import platform.Foundation.NSError
+import platform.Foundation.NSKeyValueObservingOptionNew
+import platform.Foundation.NSNotificationCenter
+import platform.Foundation.NSSelectorFromString
 import platform.Foundation.NSSortDescriptor
 import platform.Foundation.NSURL
+import platform.Foundation.addObserver
+import platform.Foundation.removeObserver
 import platform.Foundation.timeIntervalSince1970
 import platform.Foundation.valueForKey
 import platform.Photos.PHAsset
 import platform.Photos.PHAssetMediaTypeImage
+import platform.Photos.PHCachingImageManager
 import platform.Photos.PHFetchOptions
 import platform.Photos.PHImageContentModeAspectFill
 import platform.Photos.PHImageManager
 import platform.Photos.PHImageRequestOptions
 import platform.Photos.PHImageRequestOptionsDeliveryModeHighQualityFormat
 import platform.Photos.PHImageRequestOptionsResizeModeFast
+import platform.QuartzCore.CATransaction
+import platform.QuartzCore.kCATransactionDisableActions
+import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIImage
 import platform.UIKit.UIImageJPEGRepresentation
 import platform.UIKit.UIImagePickerController
@@ -60,17 +111,392 @@ import platform.UIKit.UIImagePickerControllerOriginalImage
 import platform.UIKit.UIImagePickerControllerSourceType
 import platform.UIKit.UIImageWriteToSavedPhotosAlbum
 import platform.UIKit.UINavigationControllerDelegateProtocol
+import platform.UIKit.UIView
 import platform.UIKit.UIViewController
 import platform.darwin.NSObject
+import platform.darwin.dispatch_get_main_queue
 import platform.posix.memcpy
 
 @Composable
 actual fun VideoPreview(
     modifier: Modifier,
     uriString: String,
-    loading: @Composable (() -> Unit)?
-) {
+    isPlaying: MutableState<Boolean>,
+    isLoaded: MutableState<Boolean>,
+    position: MutableState<Long>,
+    duration: MutableState<Long>,
+    isCurrentPage: Boolean,
+):PlayCallback {
+    val player = remember {
+        AVPlayer()
+    }
+    val item = remember {
+        mutableStateOf<AVPlayerItem?>(null)
+    }
+    val playerLayer by remember { mutableStateOf(AVPlayerLayer()) }
+    val avPlayerViewController = remember {
+        AVPlayerViewController().apply {
+            this.player = player
+            this.showsPlaybackControls = true
+            this.videoGravity = AVLayerVideoGravityResizeAspectFill
+        }
+    }
+    val scope = rememberCoroutineScope()
+    DisposableEffect(Unit) {
+        val job = scope.launch {
+            withContext(Dispatchers.IO) {
+                val identifier = uriString.replace("phasset://", "")
+                val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(identifier), null)
+                val asset = (fetchResult.firstObject() as? PHAsset)
+                if (asset != null) {
+                    PHCachingImageManager.defaultManager().requestAVAssetForVideo(
+                        asset,
+                        options = null,
+                        resultHandler = { avAsset, _, _ ->
+                            val avUrlAsset = avAsset as AVURLAsset
+                            val playerItem = AVPlayerItem(uRL = avUrlAsset.URL)
+                            item.value = playerItem
+                        })
+                }
+            }
+        }
+        onDispose {
+            job.cancel()
+        }
+    }
 
+    LaunchedEffect(Unit) {
+        snapshotFlow { item.value }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .collect {
+                player.replaceCurrentItemWithPlayerItem(it)
+            }
+    }
+    val playerContainer = remember {
+        UIView().apply {
+            layer.addSublayer(playerLayer)
+        }
+    }
+
+    DisposableEffect(isCurrentPage) {
+        if (!isCurrentPage) {
+            player.pause()
+        }
+        onDispose {
+            player.pause()
+        }
+    }
+
+    var isSliding by remember { mutableStateOf(false) }
+
+    DisposableEffect(item.value) {
+        if (item.value == null) return@DisposableEffect onDispose { }
+        val observer = Observer(object : PlayerEventListener {
+            override fun onPlayerItemDidPlayToEndTime() {
+                println("Observer :: onPlayerItemDidPlayToEndTime")
+                isPlaying.value = false
+                player.replaceCurrentItemWithPlayerItem(item.value)
+                player.seekToTime(CMTimeMakeWithSeconds(0.0, 1))
+                position.value=0
+            }
+
+            override fun onPlayerFailedToPlay() {
+                println("Observer :: onPlayerFailedToPlay")
+                isPlaying.value = false
+            }
+
+            override fun onPlayerBuffering() {
+                println("Observer :: onPlayerBuffering")
+                isLoaded.value = true
+            }
+
+            override fun onPlayerBufferingCompleted() {
+                println("Observer :: onPlayerBufferingCompleted")
+                isLoaded.value = false
+
+            }
+
+            override fun onPlayerPlaying() {
+                println("Observer :: onPlayerPlaying")
+                isPlaying.value = true
+            }
+
+            override fun onPlayerPaused() {
+                println("Observer :: onPlayerPaused")
+                isPlaying.value = false
+                isLoaded.value = false
+            }
+
+            override fun onPlayerStopped() {
+                println("Observer :: onPlayerStopped")
+                isPlaying.value = false
+                isLoaded.value = false
+            }
+
+            override fun onPlaying(pos: Long, dur: Long) {
+                if(isSliding)return
+                println("Observer :: onPlaying position:$pos duration:$duration")
+                position.value=pos
+            }
+        })
+        observer.addObserver(player)
+        onDispose {
+            observer.removeObserver(player)
+        }
+    }
+
+    val frame = remember { mutableStateOf(Size.Zero) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { frame.value }
+            .distinctUntilChanged()
+            .collect {
+                scope.launch {
+                    withContext(Dispatchers.Main) {
+                        CATransaction.begin()
+                        CATransaction.setValue(true, kCATransactionDisableActions)
+                        val rect = CGRectMake(0.0, 0.0, it.width.toDouble(), it.height.toDouble())
+                        playerLayer.setFrame(rect)
+                        playerContainer.setFrame(rect)
+                        avPlayerViewController.view.layer.frame = rect
+                        CATransaction.commit()
+                    }
+                }
+            }
+    }
+    with(LocalDensity.current) {
+        BoxWithConstraints(
+            modifier = modifier.then(Modifier.onGloballyPositioned {
+                frame.value = it.size.toSize().let {
+                    Size(it.width.toDp().value, it.height.toDp().value)
+                }
+            })
+        ) {
+            UIKitView(
+                factory = {
+                    playerContainer.addSubview(avPlayerViewController.view)
+                    playerContainer.setFrame(
+                        CGRectMake(
+                            0.0,
+                            0.0,
+                            frame.value.width.toDouble(),
+                            frame.value.height.toDouble()
+                        )
+                    )
+                    // 禁用 autoresizing mask
+                    avPlayerViewController.view.translatesAutoresizingMaskIntoConstraints = false
+                    // 设置 Auto Layout 约束
+                    NSLayoutConstraint.activateConstraints(
+                        listOf(
+                            avPlayerViewController.view.leadingAnchor.constraintEqualToAnchor(
+                                playerContainer.leadingAnchor
+                            ),
+                            avPlayerViewController.view.trailingAnchor.constraintEqualToAnchor(
+                                playerContainer.trailingAnchor
+                            ),
+                            avPlayerViewController.view.topAnchor.constraintEqualToAnchor(
+                                playerContainer.topAnchor
+                            ),
+                            avPlayerViewController.view.bottomAnchor.constraintEqualToAnchor(
+                                playerContainer.bottomAnchor
+                            )
+                        )
+                    )
+                    playerContainer
+                },
+                modifier = modifier.then(Modifier.onGloballyPositioned {
+                    /*val rect = it.boundsInParent().let {
+                        CGRectMake(
+                            it.topLeft.x.toDp().value.toDouble(),
+                            it.topLeft.y.toDp().value.toDouble(),
+                            it.width.toDp().value.toDouble(),
+                            it.height.toDp().value.toDouble()
+                        )
+                    }
+                    scope.launch {
+                        withContext(Dispatchers.Main) {
+                            CATransaction.begin()
+                            CATransaction.setValue(true, kCATransactionDisableActions)
+                            playerContainer.layer.setFrame(rect)
+                            playerLayer.setFrame(rect)
+                            playerContainer.setFrame(rect)
+                            avPlayerViewController.view.layer.frame = rect
+                            CATransaction.commit()
+                        }
+                    }*/
+                }),
+                update = { view ->
+                },
+                properties = UIKitInteropProperties(
+                    isInteractive = false,
+                    isNativeAccessibilityEnabled = true
+                )
+            )
+        }
+    }
+
+    val callback = remember { object :PlayCallback{
+        override fun play() {
+            if(item.value != null){
+                player.playImmediatelyAtRate(1.0f)
+            }
+        }
+        override fun pause() {
+            player.pause()
+        }
+
+        override fun seekTo(value: Long) {
+            val time = CMTimeMake(value = value, timescale = 1000)
+            player.seekToTime(time)
+        }
+
+        override fun onChangeSliding(sliding: Boolean) {
+            isSliding=sliding
+        }
+    } }
+
+    return callback
+}
+
+
+interface PlayerEventListener {
+    fun onPlayerItemDidPlayToEndTime()
+    fun onPlayerFailedToPlay()
+    fun onPlayerBuffering()
+    fun onPlayerBufferingCompleted()
+    fun onPlayerPlaying()
+    fun onPlayerPaused()
+    fun onPlayerStopped() // 新增：停止播放的回调
+
+    fun onPlaying(pos: Long, dur: Long) // 新增：播放进度回调
+}
+
+internal class Observer(private val eventListener: PlayerEventListener) : NSObject(),
+    ObserverProtocol {
+
+    override fun observeValueForKeyPath(
+        keyPath: String?,
+        ofObject: Any?,
+        change: Map<Any?, *>?,
+        context: COpaquePointer?
+    ) {
+        when (keyPath) {
+            "timeControlStatus" -> {
+                val status = (ofObject as? AVPlayer)?.timeControlStatus
+                when (status) {
+                    AVPlayerTimeControlStatusPaused -> eventListener.onPlayerPaused()
+                    AVPlayerTimeControlStatusPlaying -> eventListener.onPlayerPlaying()
+                    AVPlayerTimeControlStatusWaitingToPlayAtSpecifiedRate -> eventListener.onPlayerBufferingCompleted()
+                    else -> Unit
+                }
+            }
+
+            "status" -> {
+                val itemStatus = (ofObject as? AVPlayerItem)?.status
+                when (itemStatus) {
+                    AVPlayerItemStatusFailed -> eventListener.onPlayerFailedToPlay()
+                    else -> Unit
+                }
+            }
+
+            "playbackBufferEmpty" -> eventListener.onPlayerBuffering()
+            "playbackLikelyToKeepUp", "playbackBufferFull" -> eventListener.onPlayerBufferingCompleted()
+            else -> Unit
+        }
+    }
+
+    private var isRegisterEvent = false
+
+    fun addObserver(player: AVPlayer) {
+        if (isRegisterEvent) return
+
+        player.addObserver(this, "timeControlStatus", NSKeyValueObservingOptionNew, null)
+        player.currentItem?.apply {
+            addObserver(this@Observer, "status", NSKeyValueObservingOptionNew, null) // 添加status监听
+            addObserver(this@Observer, "playbackBufferEmpty", NSKeyValueObservingOptionNew, null)
+            addObserver(this@Observer, "playbackLikelyToKeepUp", NSKeyValueObservingOptionNew, null)
+            addObserver(this@Observer, "playbackBufferFull", NSKeyValueObservingOptionNew, null)
+
+            NSNotificationCenter.defaultCenter().addObserver(
+                this@Observer,
+                NSSelectorFromString(this@Observer::onPlayerItemDidPlayToEndTime.name),
+                AVPlayerItemDidPlayToEndTimeNotification,
+                this
+            )
+
+            // 播放失败通知监听
+            NSNotificationCenter.defaultCenter().addObserver(
+                this@Observer,
+                NSSelectorFromString(this@Observer::onPlayerFailedToPlay.name),
+                AVPlayerItemFailedToPlayToEndTimeNotification,
+                this
+            )
+        }
+
+        isRegisterEvent = true
+    }
+
+    private var timeObserver: Any? = null
+    fun addTimer(player: AVPlayer) {
+        if (timeObserver != null) return
+        timeObserver = player.addPeriodicTimeObserverForInterval(
+            CMTimeMakeWithSeconds(1.0, 1),
+            dispatch_get_main_queue()
+        ) { time ->
+            eventListener.onPlaying(
+                (time.useContents { this.value }.toLong()),
+                (player.currentItem?.duration?.useContents { this.value }?.toLong() ?: 0L)
+            )
+        }
+    }
+
+    fun removeTimer(player: AVPlayer) {
+        timeObserver?.let {
+            player.removeTimeObserver(it)
+            timeObserver = null
+        }
+    }
+
+    @Suppress("unused")
+    @ObjCAction
+    fun onPlayerItemDidPlayToEndTime() {
+        eventListener.onPlayerItemDidPlayToEndTime()
+    }
+
+    @Suppress("unused")
+    @ObjCAction
+    fun onPlayerFailedToPlay() {
+        eventListener.onPlayerFailedToPlay()
+    }
+
+    fun stopPlayer(player: AVPlayer) {
+        // 手动停止播放时调用
+        player.pause()
+        eventListener.onPlayerStopped()
+    }
+
+    fun removeObserver(player: AVPlayer) {
+        if (isRegisterEvent) {
+            player.removeObserver(this, "timeControlStatus")
+            player.currentItem?.apply {
+                removeObserver(this@Observer, "status")
+                removeObserver(this@Observer, "playbackBufferEmpty")
+                removeObserver(this@Observer, "playbackLikelyToKeepUp")
+                removeObserver(this@Observer, "playbackBufferFull")
+                NSNotificationCenter.defaultCenter().removeObserver(
+                    this@Observer,
+                    AVPlayerItemDidPlayToEndTimeNotification,
+                    this
+                )
+                NSNotificationCenter.defaultCenter().removeObserver(
+                    this@Observer,
+                    AVPlayerItemFailedToPlayToEndTimeNotification,
+                    this
+                )
+            }
+            isRegisterEvent = false
+        }
+    }
 }
 
 
@@ -110,18 +536,18 @@ class PHAssetFetcher(
             val memoryCache = it
             val key = memoryCache.keys.filter { it.key == uriStr }
             key.mapNotNull {
-                val cache = memoryCache[it]?:return@mapNotNull null
-                val image= cache.image
-                if(image.width==options.size.width.pxOrElse { 0 } && image.height==options.size.height.pxOrElse { 0 }){
+                val cache = memoryCache[it] ?: return@mapNotNull null
+                val image = cache.image
+                if (image.width == options.size.width.pxOrElse { 0 } && image.height == options.size.height.pxOrElse { 0 }) {
                     val bitmap = image.toBitmap()
-                    if(bitmap.isNull.not() && bitmap.rowBytes>0 ){
+                    if (bitmap.isNull.not() && bitmap.rowBytes > 0) {
                         return@mapNotNull ImageFetchResult(
                             image = image,
                             isSampled = false,
                             dataSource = DataSource.MEMORY,
                         )
-                    }else return@mapNotNull null
-                }else  return@mapNotNull null
+                    } else return@mapNotNull null
+                } else return@mapNotNull null
             }.firstOrNull()
         } ?: run {
             val bufferedSource: BufferedSource = Buffer()
@@ -161,7 +587,6 @@ class PHAssetFetcher(
         }
 
     }
-
 }
 
 @OptIn(ExperimentalForeignApi::class)
