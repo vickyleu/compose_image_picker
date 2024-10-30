@@ -37,6 +37,7 @@ import com.huhx.picker.provider.AssetLoader
 import com.huhx.picker.provider.AssetLoader.Companion.uriString
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.COpaquePointer
+import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.addressOf
@@ -68,6 +69,7 @@ import platform.AVFoundation.AVPlayerTimeControlStatusWaitingToPlayAtSpecifiedRa
 import platform.AVFoundation.AVURLAsset
 import platform.AVFoundation.addPeriodicTimeObserverForInterval
 import platform.AVFoundation.currentItem
+import platform.AVFoundation.currentTime
 import platform.AVFoundation.duration
 import platform.AVFoundation.pause
 import platform.AVFoundation.playImmediatelyAtRate
@@ -78,6 +80,7 @@ import platform.AVFoundation.timeControlStatus
 import platform.AVKit.AVPlayerViewController
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSizeMake
+import platform.CoreMedia.CMTime
 import platform.CoreMedia.CMTimeMake
 import platform.CoreMedia.CMTimeMakeWithSeconds
 import platform.Foundation.NSData
@@ -118,7 +121,7 @@ import platform.darwin.dispatch_get_main_queue
 import platform.posix.memcpy
 
 @Composable
-actual fun VideoPreview(
+actual fun videoPreview(
     modifier: Modifier,
     uriString: String,
     isPlaying: MutableState<Boolean>,
@@ -126,7 +129,7 @@ actual fun VideoPreview(
     position: MutableState<Long>,
     duration: MutableState<Long>,
     isCurrentPage: Boolean,
-):PlayCallback {
+): PlayCallback {
     val player = remember {
         AVPlayer()
     }
@@ -194,50 +197,43 @@ actual fun VideoPreview(
         if (item.value == null) return@DisposableEffect onDispose { }
         val observer = Observer(object : PlayerEventListener {
             override fun onPlayerItemDidPlayToEndTime() {
-                println("Observer :: onPlayerItemDidPlayToEndTime")
                 isPlaying.value = false
-                player.replaceCurrentItemWithPlayerItem(item.value)
+//
+//                player.replaceCurrentItemWithPlayerItem(item.value)
                 player.seekToTime(CMTimeMakeWithSeconds(0.0, 1))
-                position.value=0
+                position.value = 0
             }
 
             override fun onPlayerFailedToPlay() {
-                println("Observer :: onPlayerFailedToPlay")
                 isPlaying.value = false
             }
 
             override fun onPlayerBuffering() {
-                println("Observer :: onPlayerBuffering")
                 isLoaded.value = true
             }
 
             override fun onPlayerBufferingCompleted() {
-                println("Observer :: onPlayerBufferingCompleted")
                 isLoaded.value = false
 
             }
 
             override fun onPlayerPlaying() {
-                println("Observer :: onPlayerPlaying")
                 isPlaying.value = true
             }
 
             override fun onPlayerPaused() {
-                println("Observer :: onPlayerPaused")
                 isPlaying.value = false
                 isLoaded.value = false
             }
 
             override fun onPlayerStopped() {
-                println("Observer :: onPlayerStopped")
                 isPlaying.value = false
                 isLoaded.value = false
             }
 
             override fun onPlaying(pos: Long, dur: Long) {
-                if(isSliding)return
-                println("Observer :: onPlaying position:$pos duration:$duration")
-                position.value=pos
+                if (isSliding) return
+                position.value = pos
             }
         })
         observer.addObserver(player)
@@ -335,41 +331,32 @@ actual fun VideoPreview(
         }
     }
 
-    val callback = remember { object :PlayCallback{
-        override fun play() {
-            if(item.value != null){
-                player.playImmediatelyAtRate(1.0f)
+    val callback = remember {
+        object : PlayCallback {
+            override fun play() {
+                if (item.value != null) {
+                    player.playImmediatelyAtRate(1.0f)
+                }
+            }
+
+            override fun pause() {
+                player.pause()
+            }
+
+            override fun seekTo(value: Long) {
+                val time = CMTimeMake(value = value, timescale = 1000)
+                player.seekToTime(time)
+            }
+
+            override fun onChangeSliding(sliding: Boolean) {
+                isSliding = sliding
             }
         }
-        override fun pause() {
-            player.pause()
-        }
-
-        override fun seekTo(value: Long) {
-            val time = CMTimeMake(value = value, timescale = 1000)
-            player.seekToTime(time)
-        }
-
-        override fun onChangeSliding(sliding: Boolean) {
-            isSliding=sliding
-        }
-    } }
+    }
 
     return callback
 }
 
-
-interface PlayerEventListener {
-    fun onPlayerItemDidPlayToEndTime()
-    fun onPlayerFailedToPlay()
-    fun onPlayerBuffering()
-    fun onPlayerBufferingCompleted()
-    fun onPlayerPlaying()
-    fun onPlayerPaused()
-    fun onPlayerStopped() // 新增：停止播放的回调
-
-    fun onPlaying(pos: Long, dur: Long) // 新增：播放进度回调
-}
 
 internal class Observer(private val eventListener: PlayerEventListener) : NSObject(),
     ObserverProtocol {
@@ -431,6 +418,7 @@ internal class Observer(private val eventListener: PlayerEventListener) : NSObje
                 AVPlayerItemFailedToPlayToEndTimeNotification,
                 this
             )
+            addTimer(player)
         }
 
         isRegisterEvent = true
@@ -440,13 +428,26 @@ internal class Observer(private val eventListener: PlayerEventListener) : NSObje
     fun addTimer(player: AVPlayer) {
         if (timeObserver != null) return
         timeObserver = player.addPeriodicTimeObserverForInterval(
-            CMTimeMakeWithSeconds(1.0, 1),
+            CMTimeMake(value = 50, timescale = 1000),//300毫秒回调一次
             dispatch_get_main_queue()
         ) { time ->
+            if (player.status == AVPlayerItemStatusFailed) {
+                eventListener.onPlayerFailedToPlay()
+                return@addPeriodicTimeObserverForInterval
+            }
             eventListener.onPlaying(
-                (time.useContents { this.value }.toLong()),
-                (player.currentItem?.duration?.useContents { this.value }?.toLong() ?: 0L)
+                CMTimeGetMilliseconds(player.currentTime()).coerceAtLeast(0.0).toLong(),
+                (player.currentItem?.duration?.let {
+                    CMTimeGetMilliseconds(it)
+                } ?: 0.0).coerceAtLeast(0.0).toLong()
             )
+        }
+    }
+
+    @Suppress("FunctionName")
+    private fun CMTimeGetMilliseconds(time: CValue<CMTime>): Double {
+        time.useContents {
+            return (value.toDouble() * 1000.0) / timescale.toDouble()
         }
     }
 
@@ -476,6 +477,7 @@ internal class Observer(private val eventListener: PlayerEventListener) : NSObje
     }
 
     fun removeObserver(player: AVPlayer) {
+        removeTimer(player)
         if (isRegisterEvent) {
             player.removeObserver(this, "timeControlStatus")
             player.currentItem?.apply {

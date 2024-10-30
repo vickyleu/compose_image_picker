@@ -37,7 +37,6 @@ actual class CameraLauncher(
             val ass = this.assetInfo!!
             assets.values.forEach each@{
                 it.forEach {
-                    println("it.uriString: ${it.uriString}  assetInfo.uriString: ${ass.uriString}")
                     if (it.uriString == ass.uriString) {
                         assetInfo = it
                         this.assetInfo = null

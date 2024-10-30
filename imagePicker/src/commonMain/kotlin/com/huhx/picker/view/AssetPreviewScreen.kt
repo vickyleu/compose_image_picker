@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.size
@@ -35,7 +36,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,8 +49,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -62,13 +61,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import cafe.adriel.voyager.navigator.Navigator
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
@@ -96,11 +97,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -132,6 +133,9 @@ internal class AssetPreviewScreen(
         var index by remember { mutableIntStateOf(model.index) }
         val assets = remember(model.index) { model.assets }
         val pageState = rememberPagerState(pageCount = assets::size)
+
+
+
         LaunchedEffect(assets.size) {
             pageState.scrollToPage(index.coerceIn(0, assets.size - 1))
         }
@@ -426,8 +430,8 @@ private fun AssetPreview(assets: List<Pair<String, AssetInfo>>, pagerState: Page
                 }
             }
         } else {
-            VideoItem(asset, page, pagerState)
 
+            VideoItem(asset, page, pagerState)
         }
     }
 }
@@ -438,6 +442,9 @@ private fun VideoItem(
     page: Int,
     pagerState: PagerState
 ) {
+
+    val isCurrentPage = page == pagerState.currentPage
+
     val isToolbarVisible = remember { mutableStateOf(true) }
     val isLoaded = remember { mutableStateOf(true) }
     val isPlaying = remember { mutableStateOf(false) }
@@ -447,7 +454,7 @@ private fun VideoItem(
     fun startHideToolbarCountdown() {
         tempJob.value?.cancel()
         tempJob.value = scope.launch {
-            delay(2000L) // 2秒倒计时
+            delay(3000L) // 3秒倒计时
             if (isPlaying.value) {
                 isToolbarVisible.value = false
             }
@@ -467,7 +474,7 @@ private fun VideoItem(
         val position = remember { mutableStateOf(0L) }
         val duration = remember { mutableStateOf(asset.duration ?: 0L) }
 
-        val playCallback = VideoPreview(
+        val playCallback = videoPreview(
             uriString = asset.uriString,
             modifier = Modifier.fillMaxSize().clickable(
                 interactionSource = interactionSource,
@@ -485,132 +492,175 @@ private fun VideoItem(
             isLoaded = isLoaded,
             position = position,
             duration = duration,
-            isCurrentPage = page == pagerState.currentPage // 判断当前页面
+            isCurrentPage = isCurrentPage // 判断当前页面
         )
 
-        // 显示加载状态
-        if (isLoaded.value) {
-            Box(modifier = Modifier.align(Alignment.Center)) {
-                CircularProgressIndicator()
-            }
-        }
-        Box(modifier = Modifier.align(Alignment.Center)) {
-            AnimatedVisibility(
-                visible = isToolbarVisible.value,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                IconButton(
-                    onClick = {
-                        if (isPlaying.value) {
-                            playCallback.pause()
-                        } else {
-                            playCallback.play()
-                        }
-                        isToolbarVisible.value = true // 重置倒计时
-                        startHideToolbarCountdown()
-                    },
-                    modifier = Modifier
-                        .size(64.dp)
-                        .padding(8.dp),
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = Color.White
-                    ),
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying.value) Icons.Filled.Done else Icons.Filled.PlayArrow,
-                        contentDescription = if (isPlaying.value) "Pause" else "Play",
-                        modifier = Modifier.fillMaxSize(),
-                        tint = Color.Black
-                    )
+        val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
+        if (isCurrentPage) {
+            // 显示加载状态
+            if (isLoaded.value) {
+                Box(modifier = Modifier.align(Alignment.Center)) {
+                    CircularProgressIndicator()
                 }
             }
-        }
-
-        Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-            AnimatedVisibility(
-                visible = isToolbarVisible.value,
-                enter = fadeIn() + slideInVertically(
-                    initialOffsetY = { it },
-                ),
-                exit = fadeOut() + slideOutVertically(
-                    targetOffsetY = { it },
-                )
-            ) {
-
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .wrapContentHeight()
-                        .background(Color.Black.copy(alpha = 0.8F))
-                        /*.pointerInput(Unit) {
-                            // 屏蔽掉下层的点击事件,触摸事件,在当前Row中事件不透传
-                            *//*awaitPointerEventScope {
-                                while (true) {
-                                    awaitPointerEvent()
-                                }
-                            }*//*
-                        }*/
-                        .padding(horizontal = 10.dp, vertical = 15.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+            Box(modifier = Modifier.align(Alignment.Center)) {
+                AnimatedVisibility(
+                    visible = isToolbarVisible.value,
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
-                    val tempPosFlow = remember { MutableStateFlow(-1L) }
-                    val tempPos by tempPosFlow.collectAsState()
-
-                    val displayedPos by remember {
-                        derivedStateOf { (if (tempPos < 0) position.value else tempPos).coerceAtLeast(0) }
-                    }
-
-                    Text(
-                        text = displayedPos.formatDurationSec(),
-                        color = Color.White,
-                        fontSize = 14.sp
-                    )
-
-
-                    ColorfulSlider(
-                        value = displayedPos.toFloat().apply {
-                            println("onValueChange===>>>===>>>position=${position.value}  displayedPos=${displayedPos}")
-                        }, // Current value of the slider
-                        onValueChange = { second, offset ->
-                            playCallback.onChangeSliding(true)
-                            println("onValueChange===>>>position=${position.value}  second=${second.toLong()} " +
-                                    " duration.value=${duration.value.toFloat()}")
-                            tempPosFlow.value  = second.toLong()
+                    IconButton(
+                        onClick = {
+                            if (isPlaying.value) {
+                                playCallback.pause()
+                            } else {
+                                playCallback.play()
+                            }
                             isToolbarVisible.value = true // 重置倒计时
                             startHideToolbarCountdown()
                         },
-                        modifier = Modifier.weight(1f),
-                        enabled = true, // Enable the slider
-                        valueRange = 0f..duration.value.toFloat(), // Range of the slider
-                        onValueChangeFinished = {
-                            println("onValueChange===>>>isSliding.value: onChangeSliding =1= onValueChangeFinished ")
-                            playCallback.seekTo(tempPosFlow.value)
-                            playCallback.onChangeSliding(false)
-                            tempPosFlow.value  = -1L
-                        },
-                        colors = MaterialSliderDefaults.defaultColors(
-                            disabledThumbColor = Color.Red.toBrush(),
-                            disabledActiveTrackColor = Color.White.toBrush(),
-                            disabledInactiveTrackColor = Color.DarkGray.copy(alpha = 0.7f)
-                                .toBrush(),
-                            thumbColor = Color.Red.toBrush(),
-                            inactiveTrackColor = Color.DarkGray.copy(alpha = 0.7f).toBrush(),
-                            activeTrackColor = Color.White.toBrush()
+                        modifier = Modifier
+                            .size(64.dp)
+                            .padding(8.dp),
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = Color.Black.copy(alpha = 0.8f),
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying.value) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = if (isPlaying.value) "Pause" else "Play",
+                            modifier = Modifier.fillMaxSize(),
+                            tint = Color.White
                         )
-                    )
-
-                    Text(
-                        text = (duration.value - displayedPos).coerceAtLeast(0L)
-                            .formatDurationSec(),
-                        color = Color.White,
-                        fontSize = 14.sp
-                    )
+                    }
                 }
+            }
 
+
+            val listener = remember {
+                object : DefaultLifecycleObserver {
+                    override fun onPause(owner: LifecycleOwner) {
+                        playCallback.pause()
+                    }
+
+                    override fun onDestroy(owner: LifecycleOwner) {
+                        playCallback.pause()
+                    }
+                }
+            }
+            DisposableEffect(Unit) {
+                lifecycle.lifecycleScope.launch {
+                    lifecycle.lifecycle.addObserver(listener)
+                }
+                onDispose {
+                    lifecycle.lifecycle.removeObserver(listener)
+                }
+            }
+
+            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                AnimatedVisibility(
+                    visible = isToolbarVisible.value,
+                    enter = fadeIn() + slideInVertically(
+                        initialOffsetY = { it },
+                    ),
+                    exit = fadeOut() + slideOutVertically(
+                        targetOffsetY = { it },
+                    )
+                ) {
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .wrapContentHeight()
+                            .heightIn(min = 20.dp)
+                            .background(Color.Black.copy(alpha = 0.8F))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                // 此处留空，不做任何处理，只为了拦截点击事件，避免透传
+                            }
+                            .padding(horizontal = 10.dp, vertical = 15.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        val tempPosFlow = remember { mutableStateOf(-1L) }
+
+                        Box(
+                            modifier = Modifier.weight(0.2f),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Text(
+                                text = ((if (tempPosFlow.value < 0) position.value else tempPosFlow.value).coerceAtLeast(
+                                    0
+                                )).formatDurationSec(),
+                                color = Color.White,
+                                fontSize = 14.sp
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier.weight(1f).wrapContentHeight()
+                                .heightIn(min = 20.dp)
+                        ) {
+
+                            ColorfulSlider(
+                                value = ((if (tempPosFlow.value < 0) position.value else tempPosFlow.value).coerceAtLeast(
+                                    0
+                                )).toFloat(), // Current value of the slider
+                                onValueChange = { second, offset ->
+                                    playCallback.onChangeSliding(true)
+                                    tempPosFlow.value = second.toLong()
+                                    isToolbarVisible.value = true // 重置倒计时
+                                    startHideToolbarCountdown()
+                                },
+                                modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                                enabled = true, // Enable the slider
+                                valueRange = 0f..duration.value.toFloat(), // Range of the slider
+                                onValueChangeFinished = {
+                                    val old = tempPosFlow.value
+                                    playCallback.seekTo(old)
+                                    scope.launch {
+                                        withContext(Dispatchers.IO) {
+                                            playCallback.onChangeSliding(false)
+                                            delay(100L)
+                                            tempPosFlow.value = -1L
+                                        }
+                                    }
+                                },
+                                colors = MaterialSliderDefaults.defaultColors(
+                                    disabledThumbColor = Color.Red.toBrush(),
+                                    disabledActiveTrackColor = Color.White.toBrush(),
+                                    disabledInactiveTrackColor = Color.DarkGray.copy(alpha = 0.7f)
+                                        .toBrush(),
+                                    thumbColor = Color.Red.toBrush(),
+                                    inactiveTrackColor = Color.DarkGray.copy(alpha = 0.7f)
+                                        .toBrush(),
+                                    activeTrackColor = Color.White.toBrush()
+                                )
+                            )
+                        }
+                        Box(
+                            modifier = Modifier.weight(0.2f),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Text(
+                                text = (duration.value - ((if (tempPosFlow.value < 0) position.value else tempPosFlow.value).coerceAtLeast(
+                                    0
+                                ))).coerceAtLeast(0L)
+                                    .formatDurationSec(),
+                                color = Color.White,
+                                fontSize = 14.sp
+                            )
+                        }
+
+                    }
+
+                }
             }
         }
+
     }
 }
+
 
 private fun Long.prefixZero(): String {
     return if (this < 10) "0$this" else "$this"
@@ -639,7 +689,7 @@ fun ImagePreview(
             .crossfade(true)
             .memoryCacheKey("${uriString}_preview_")
             .decoderFactoryPlatform {
-                println("progress: $it")
+//                println("progress: $it")
             }
             .build(),
         filterQuality = FilterQuality.Low,
@@ -666,9 +716,20 @@ interface PlayCallback {
     fun onChangeSliding(sliding: Boolean)
 }
 
+interface PlayerEventListener {
+    fun onPlayerItemDidPlayToEndTime()
+    fun onPlayerFailedToPlay()
+    fun onPlayerBuffering()
+    fun onPlayerBufferingCompleted()
+    fun onPlayerPlaying()
+    fun onPlayerPaused()
+    fun onPlayerStopped() // 新增：停止播放的回调
+
+    fun onPlaying(pos: Long, dur: Long) // 新增：播放进度回调
+}
 
 @Composable
-expect fun VideoPreview(
+expect fun videoPreview(
     modifier: Modifier = Modifier,
     uriString: String,
     isPlaying: MutableState<Boolean>,

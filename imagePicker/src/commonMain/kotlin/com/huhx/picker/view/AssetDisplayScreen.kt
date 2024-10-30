@@ -126,7 +126,7 @@ internal class AssetDisplayScreen(
     ) {
         val viewModel = LocalAssetViewModelProvider.current
         val initialTopBarHeight = remember { viewModel.initialTopBarHeight }
-        val initialBottomBarHeight = remember {viewModel.initialBottomBarHeight }
+        val initialBottomBarHeight = remember { viewModel.initialBottomBarHeight }
         Box(
             modifier = Modifier
                 .background(Color.Gray)
@@ -134,9 +134,11 @@ internal class AssetDisplayScreen(
                 .fillMaxSize()
         ) {
 
-            AssetContent(viewModel,
+            AssetContent(
+                viewModel,
                 model.assetPickerConfig.requestType,
-                initialBottomBarHeight,navigator)
+                initialBottomBarHeight, navigator
+            )
         }
     }
 
@@ -373,15 +375,20 @@ private fun AssetContent(
     // 需要将assets 排序,最后将所有list flatten 到一个list里面去
     val dtf = remember { DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日 HH:mm:ss") }
     val flattenedList = remember(assets) {
-        listOf("-" to AssetInfo.Camera, *(assets.toList().sortedByDescending {
-            dtf.parse(it.first)
-        }.flatMap { (time, list) ->
-            list.map {
-                time to it
-            }.sortedByDescending {
-                dtf.parse(it.first)
+        mutableListOf<Pair<String, AssetInfo>>().apply {
+            if(requestType != RequestType.VIDEO){
+                add("-" to AssetInfo.Camera)
             }
-        }.toTypedArray()))
+            addAll((assets.toList().sortedByDescending {
+                dtf.parse(it.first)
+            }.flatMap { (time, list) ->
+                list.map {
+                    time to it
+                }.sortedByDescending {
+                    dtf.parse(it.first)
+                }
+            }))
+        }.toList()
     }
 
     val impl = LocalStoragePermission.current
@@ -412,9 +419,12 @@ private fun AssetContent(
                             .padding(horizontal = 1.dp, vertical = 1.dp),
                         assetInfo = assetInfo,
                         navigateToPreview = {
-                            navigator.push(AssetPreviewScreen(
-                                viewModel = viewModel,
-                                index = (index - 1),time=time,requestType=requestType))
+                            navigator.push(
+                                AssetPreviewScreen(
+                                    viewModel = viewModel,
+                                    index = (index - 1), time = time, requestType = requestType
+                                )
+                            )
                         },
                         selectedList = viewModel.selectedList,
                         onCameraClicks = {

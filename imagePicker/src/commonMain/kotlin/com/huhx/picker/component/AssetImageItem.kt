@@ -190,7 +190,7 @@ fun SelectedAssetImageItem(
             model = ImageRequest.Builder(context)
                 .data(assetInfo.uriString)
                 .decoderFactoryPlatform{
-                    println("progress: $it")
+//                    println("progress: $it")
                 }
 //                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
                 .crossfade(true)

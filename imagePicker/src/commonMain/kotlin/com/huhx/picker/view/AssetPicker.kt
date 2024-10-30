@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import coil3.compose.LocalPlatformContext
+import com.github.jing332.filepicker.base.FileImpl
 import com.huhx.picker.AssetPickerRoute
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.AssetPickerConfig
@@ -28,8 +29,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AssetPicker(
     assetPickerConfig: AssetPickerConfig,
-    onPicked: (List<AssetInfo>) -> Unit,
-    onClose: (List<AssetInfo>) -> Unit,
+    onPicked: (List<FileImpl>) -> Unit,
+    onClose: (List<FileImpl>) -> Unit,
     onLoading: @Composable (() -> Unit)? = null,
 ) {
     val context = LocalPlatformContext.current

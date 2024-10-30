@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toNSDateComponents
+import platform.AVFoundation.AVURLAsset
 import platform.Foundation.NSCalendar
 import platform.Foundation.NSCalendarUnitDay
 import platform.Foundation.NSCalendarUnitHour
@@ -23,6 +24,7 @@ import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSLocale
 import platform.Photos.PHAssetMediaTypeImage
 import platform.Photos.PHAssetMediaTypeVideo
+import platform.Photos.PHCachingImageManager
 import platform.Photos.PHContentEditingInputRequestOptions
 import platform.Photos.requestContentEditingInputWithOptions
 
@@ -58,9 +60,7 @@ actual class DateTimeFormatterKMP(private val formatter: NSDateFormatter) {
                 formatter.formatter.stringFromDate(it)
             } ?: calendar.dateFromComponents(nsDateComponents)?.let {
                 formatter.formatter.stringFromDate(it)
-            } ?: "").apply {
-                println("Formatted date: $this ${formatter.formatter.dateFormat}")
-            }
+            } ?: "")
         }
 
         actual fun ofPattern(pattern: String): DateTimeFormatterKMP {
@@ -109,9 +109,9 @@ actual suspend fun AssetInfo.toUri(): Uri {
     val uriStr = this.uriString
     val completer = CompletableDeferred<String>()
     withContext(Dispatchers.IO) {
-        val filePathByImpl = if(this@toUri is AssetLoader.AssetInfoImpl){
+        val filePathByImpl = if (this@toUri is AssetLoader.AssetInfoImpl) {
             this@toUri._filePath
-        }else{
+        } else {
             this@toUri.filepath
         }
         if (filePathByImpl.isNotBlank()) {
@@ -120,18 +120,36 @@ actual suspend fun AssetInfo.toUri(): Uri {
             if (uriStr.startsWith("phasset://")) {
                 this@toUri.size.toInt()
                 delay(300)
-                println("uriStr: $uriStr size:${this@toUri.size.toInt()}")
                 val localIdentifier = uriStr.substring("phasset://".length)
                 val asset = localIdentifier.toPHAsset() ?: return@withContext run {
                     completer.complete(uriStr)
                 }
-                asset.requestContentEditingInputWithOptions(options = PHContentEditingInputRequestOptions.new()) { contentEditingInput, info ->
-                    val imageURL = contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
-                    println("imageURL: $imageURL")
-                    if(this@toUri is AssetLoader.AssetInfoImpl){
-                        this@toUri.setFilePath(imageURL)
+                when (asset.mediaType) {
+                    PHAssetMediaTypeImage -> {
+                        asset.requestContentEditingInputWithOptions(options = PHContentEditingInputRequestOptions.new()) { contentEditingInput, info ->
+                            val imageURL = contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
+                            if (this@toUri is AssetLoader.AssetInfoImpl) {
+                                this@toUri.setFilePath(imageURL)
+                            }
+                            completer.complete(imageURL)
+                        }
                     }
-                    completer.complete(imageURL)
+                    PHAssetMediaTypeVideo -> {
+                        PHCachingImageManager.defaultManager().requestAVAssetForVideo(
+                            asset,
+                            options = null,
+                            resultHandler = { avAsset, _, _ ->
+                                val avUrlAsset = avAsset as AVURLAsset
+                                val videoURL = avUrlAsset.URL.absoluteString ?: ""
+                                if (this@toUri is AssetLoader.AssetInfoImpl) {
+                                    this@toUri.setFilePath(videoURL)
+                                }
+                                completer.complete(videoURL)
+                            })
+                    }
+                    else -> {
+                        completer.complete(uriStr)
+                    }
                 }
             } else {
                 completer.complete(uriStr)

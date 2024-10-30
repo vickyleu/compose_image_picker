@@ -13,14 +13,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.Navigator
-import com.github.jing332.filepicker.base.FileImpl
+import com.github.jing332.filepicker.base.absolutePath
 import com.github.jing332.filepicker.base.inputStream
 import com.github.jing332.filepicker.base.useImpl
 import com.huhx.app.ImagePicker
 import com.huhx.app.data.MomentModelFactory
 import com.huhx.app.data.MomentRepository
 import com.huhx.app.data.MomentViewModel
-import com.huhx.picker.model.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
@@ -44,6 +43,7 @@ class DisplayScreen : BasicScreen<DisplayViewModel>(
             val scope = rememberCoroutineScope()
             ImagePicker(
                 onPicked = {
+                    val copy = listOf(*it.toTypedArray())
                     viewModel.selectedList.clear()
                     println("ImagePicker onPicked:${it.size}")
                     viewModel.selectedList.addAll(it)
@@ -56,8 +56,8 @@ class DisplayScreen : BasicScreen<DisplayViewModel>(
                     }
                 },
                 onClose = {
+                    val copy = listOf(*it.toTypedArray())
                     viewModel.selectedList.clear()
-
                 }
             )
             LaunchedEffect(key1 = viewModel) {
@@ -66,19 +66,12 @@ class DisplayScreen : BasicScreen<DisplayViewModel>(
                     .collect {
                         if (it == 1) {
                             viewModel.selectedList
-                                .mapNotNull {
-                                    val path = it.toUri().path
-                                    println("selectedList.last()======>> size=${it.size} filepath=${it.filepath} filename=${it.filename}  path=${path}")
-                                    if (path != null && it.size > 0) {
-                                        path to it.size
-                                    } else null
-                                }
-                                .map { (path, size) ->
-                                    val buffer = ByteArray(size.toInt())
-                                    FileImpl(path).inputStream().useImpl {
+                                .map { file ->
+                                    val buffer = ByteArray(file.length().toInt())
+                                    file.inputStream().useImpl {
                                         it.read(buffer)
                                     }
-                                    println("bytesRead:${buffer.size}  ${path} ")
+                                    println("bytesRead:${buffer.size}  ${file.absolutePath} ")
                                     buffer
                                 }.toList().lastOrNull()?.apply {
 

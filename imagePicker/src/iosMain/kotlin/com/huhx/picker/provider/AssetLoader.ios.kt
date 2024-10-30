@@ -16,6 +16,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
+import platform.AVFoundation.AVURLAsset
 import platform.Foundation.NSPredicate
 import platform.Foundation.NSSortDescriptor
 import platform.Foundation.NSString
@@ -32,6 +33,7 @@ import platform.Photos.PHAssetCollectionTypeSmartAlbum
 import platform.Photos.PHAssetMediaTypeImage
 import platform.Photos.PHAssetMediaTypeVideo
 import platform.Photos.PHAssetResource
+import platform.Photos.PHCachingImageManager
 import platform.Photos.PHContentEditingInputRequestOptions
 import platform.Photos.PHFetchOptions
 import platform.Photos.PHFetchResult
@@ -182,10 +184,6 @@ actual abstract class AssetLoader {
                                 else -> "image/jpeg"
                             }// 根据需要设置MIME类型
 //                            val mimeType = "image/jpeg"
-                            if(mimeType=="video/mp4"){
-                                println("asset.duration::fileName:$fileName   ${asset.duration}")
-                            }
-
                             assets.add(
                                 AssetInfoImpl(
                                     id = asset.localIdentifier,
@@ -266,11 +264,28 @@ actual abstract class AssetLoader {
                             val assets = id.toPHAsset()
                             val filePath = assets?.let {
                                 val completer = CompletableDeferred<String>()
-                                it.requestContentEditingInputWithOptions(options = PHContentEditingInputRequestOptions.new()) {
-                                        contentEditingInput, info ->
-                                    val imageURL = contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
-                                    println("imageURL: $imageURL")
-                                    completer.complete(imageURL)
+
+                                when(it.mediaType){
+                                    PHAssetMediaTypeImage -> {
+                                        it.requestContentEditingInputWithOptions(options = PHContentEditingInputRequestOptions.new()) {
+                                            contentEditingInput, info ->
+                                            val imageURL = contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
+                                            completer.complete(imageURL)
+                                        }
+                                    }
+                                    PHAssetMediaTypeVideo -> {
+                                        PHCachingImageManager.defaultManager().requestAVAssetForVideo(
+                                            it,
+                                            options = null,
+                                            resultHandler = { avAsset, _, _ ->
+                                                val avUrlAsset = avAsset as AVURLAsset
+                                                val videoURL = avUrlAsset.URL.absoluteString ?: ""
+                                                completer.complete(videoURL)
+                                            })
+                                    }
+                                    else -> {
+                                        completer.complete("")
+                                    }
                                 }
                                 completer.await()
                             } ?: ""

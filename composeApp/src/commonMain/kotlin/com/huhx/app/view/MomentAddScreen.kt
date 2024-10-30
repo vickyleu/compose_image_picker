@@ -39,10 +39,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
+import com.github.jing332.filepicker.base.absolutePath
 import com.huhx.app.data.IdHelper
 import com.huhx.app.data.Moment
 import com.huhx.app.data.MomentViewModel
@@ -71,7 +71,7 @@ fun MomentAddScreen(
                         username = username,
                         imageUrl = imageUrl,
                         content = viewModel.content,
-                        images = viewModel.selectedList.joinToString(",") { it.uriString },
+                        images = viewModel.selectedList.joinToString(",") { it.absolutePath },
                         createTime = Clock.System.now().toLocalDateTime(TimeZone.UTC).format(
                             ofPattern("yyyy-MM-dd HH:mm:ss")
                         )
@@ -183,7 +183,7 @@ fun ImageAdd(
 
         items(viewModel.selectedList) {
             AsyncImage(
-                model = it.uriString,
+                model = it.absolutePath,
                 modifier = Modifier
                     .fillMaxSize()
                     .aspectRatio(1.0F),

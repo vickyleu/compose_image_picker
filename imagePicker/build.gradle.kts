@@ -57,6 +57,7 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.ui)
             implementation(compose.material)
+            implementation(compose.materialIconsExtended)
             implementation(compose.material3)
             implementation(compose.components.resources)
 
@@ -66,6 +67,9 @@ kotlin {
 
             implementation(libs.kotlinx.datetime)
             implementation(libs.navigation.compose)
+            implementation(libs.compose.lifecycle.runtime)
+
+            implementation(libs.compose.filepicker)
 
 
             implementation(libs.coil.core)

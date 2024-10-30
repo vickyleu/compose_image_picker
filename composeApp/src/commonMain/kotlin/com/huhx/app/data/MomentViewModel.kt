@@ -5,11 +5,12 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.github.jing332.filepicker.base.FileImpl
 import com.huhx.picker.model.AssetInfo
 
 class MomentViewModel constructor(repository: MomentRepository) : ViewModel() {
 
-    val selectedList = mutableStateListOf<AssetInfo>()
+    val selectedList = mutableStateListOf<FileImpl>()
     var content by mutableStateOf("")
 
     private val _moments = mutableStateListOf<Moment>()

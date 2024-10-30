@@ -3,38 +3,59 @@ package com.huhx.picker
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
 import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
+import com.github.jing332.filepicker.base.FileImpl
 import com.huhx.picker.base.LocalNavigatorController
-import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.AssetPickerConfig
 import com.huhx.picker.model.RequestType
+import com.huhx.picker.model.toUri
 import com.huhx.picker.view.AssetDisplayScreen
 import com.huhx.picker.viewmodel.AssetViewModel
 import com.huhx.picker.viewmodel.LocalAssetViewModelProvider
+import kotlinx.coroutines.launch
 
 @OptIn(InternalVoyagerApi::class)
 @Composable
 internal fun AssetPickerRoute(
     viewModel: AssetViewModel,
-    onPicked: (List<AssetInfo>) -> Unit,
-    onClose: (List<AssetInfo>) -> Unit,
+    onPicked: (List<FileImpl>) -> Unit,
+    onClose: (List<FileImpl>) -> Unit,
     assetPickerConfig: AssetPickerConfig
 ) {
+    val scope = rememberCoroutineScope()
+
     CompositionLocalProvider(LocalAssetViewModelProvider provides viewModel) {
-        val startScreen = remember{  AssetDisplayScreen(viewModel = viewModel, onPicked = {
-            val list = mutableListOf<AssetInfo>()
-            list.addAll(viewModel.selectedList)
-            viewModel.selectedList.clear()
-            onPicked(list)
-        }, onClose = {
-            val list = mutableListOf<AssetInfo>()
-            list.addAll(viewModel.selectedList)
-            viewModel.selectedList.clear()
-            onClose(list)
-        }, assetPickerConfig = assetPickerConfig) }
+        val startScreen = remember {
+            AssetDisplayScreen(viewModel = viewModel, onPicked = {
+                scope.launch {
+                    val list = mutableListOf<FileImpl>()
+                    list.addAll(viewModel.selectedList.mapNotNull {
+                        val path = it.toUri().path
+                        if (path != null && it.size > 0) {
+                            FileImpl(path)
+                        } else null
+                    })
+                    viewModel.selectedList.clear()
+                    onPicked(list)
+                }
+            }, onClose = {
+                scope.launch {
+                    val list = mutableListOf<FileImpl>()
+                    list.addAll(viewModel.selectedList.mapNotNull {
+                        val path = it.toUri().path
+                        if (path != null && it.size > 0) {
+                            FileImpl(path)
+                        } else null
+                    })
+                    viewModel.selectedList.clear()
+                    onClose(list)
+                }
+            }, assetPickerConfig = assetPickerConfig)
+        }
         Navigator(
             screen = startScreen,
             disposeBehavior = NavigatorDisposeBehavior(
@@ -44,8 +65,8 @@ internal fun AssetPickerRoute(
             onBackPressed = { currentScreen ->
                 false
             }
-        ){
-            CompositionLocalProvider(LocalNavigatorController provides it){
+        ) {
+            CompositionLocalProvider(LocalNavigatorController provides it) {
                 CurrentScreen()
             }
         }

@@ -23,7 +23,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredSizeIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -60,9 +60,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -209,160 +207,144 @@ internal fun ColorfulSlider(
     val tickFractions = remember(steps) {
         stepsToTickFractions(steps)
     }
-    BoxWithConstraints(
-        modifier = modifier
-            .minimumInteractiveComponentSize()
-            .requiredSizeIn(
-                minWidth = ThumbRadius * 2,
-                minHeight = ThumbRadius * 2
-            ),
-        contentAlignment = Alignment.CenterStart
-    ) {
+    with(LocalDensity.current) {
+        BoxWithConstraints(
+            modifier = modifier.minimumInteractiveComponentSize().requiredSizeIn(
+                minWidth = ThumbRadius * 2, minHeight = ThumbRadius * 2
+            ), contentAlignment = Alignment.CenterStart
+        ) {
 
-        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+            val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
-        val width = constraints.maxWidth.toFloat()
-        val thumbRadiusInPx: Float
+            val width = constraints.maxWidth.toFloat()
+            // Start of the track used for measuring progress,
+            // it's line + radius of cap which is half of height of track
+            // to draw this on canvas starting point of line
+            // should be at trackStart + trackHeightInPx / 2 while drawing
+            val thumbRadiusInPx: Float by remember(width) { mutableStateOf( thumbRadius.toPx()) }
+            val strokeRadius: Float by remember(width) { mutableStateOf( trackHeight.toPx() / 2) }
+            val trackStart: Float by remember(width) { mutableStateOf(thumbRadiusInPx.coerceAtLeast(strokeRadius)) }
+            // End of the track that is used for measuring progress
+            val trackEnd: Float by remember(width) { mutableStateOf(width - trackStart) }
 
-        // Start of the track used for measuring progress,
-        // it's line + radius of cap which is half of height of track
-        // to draw this on canvas starting point of line
-        // should be at trackStart + trackHeightInPx / 2 while drawing
-        val trackStart: Float
-        // End of the track that is used for measuring progress
-        val trackEnd: Float
-        val strokeRadius: Float
-        with(LocalDensity.current) {
-            thumbRadiusInPx = thumbRadius.toPx()
-            strokeRadius = trackHeight.toPx() / 2
-            trackStart = thumbRadiusInPx.coerceAtLeast(strokeRadius)
-            trackEnd = width - trackStart
-        }
+            // Sales and interpolates from offset from dragging to user value in valueRange
+            fun scaleToUserValue(offset: Float) =
+                scale(trackStart, trackEnd, offset, valueRange.start, valueRange.endInclusive)
 
-        // Sales and interpolates from offset from dragging to user value in valueRange
-        fun scaleToUserValue(offset: Float) =
-            scale(trackStart, trackEnd, offset, valueRange.start, valueRange.endInclusive)
+            // Scales user value using valueRange to position on x axis on screen
+            fun scaleToOffset(userValue: Float) =
+                scale(valueRange.start, valueRange.endInclusive, userValue, trackStart, trackEnd)
 
-        // Scales user value using valueRange to position on x axis on screen
-        fun scaleToOffset(userValue: Float) =
-            scale(valueRange.start, valueRange.endInclusive, userValue, trackStart, trackEnd)
+            val scope = rememberCoroutineScope()
+            val rawOffset = remember { mutableStateOf(scaleToOffset(value)) }
+            val pressOffset = remember { mutableStateOf(0f) }
 
-        val scope = rememberCoroutineScope()
-        val rawOffset = remember { mutableStateOf(scaleToOffset(value)) }
-        val pressOffset = remember { mutableStateOf(0f) }
-
-        val draggableState = remember(trackStart, trackEnd, valueRange) {
-            SliderDraggableState {
-                rawOffset.value = (rawOffset.value + it + pressOffset.value)
-                pressOffset.value = 0f
-                val offsetInTrack = rawOffset.value.coerceIn(trackStart, trackEnd)
-                println("onValueChange===>>>1")
-                onValueChangeState.value.invoke(
-                    scaleToUserValue(offsetInTrack),
-                    Offset(rawOffset.value.coerceIn(trackStart, trackEnd), strokeRadius)
-                )
-            }
-        }
-        CorrectValueSideEffect(
-            ::scaleToOffset,
-            valueRange,
-            trackStart..trackEnd,
-            rawOffset,
-            value
-        )
-
-        val trackProcess = remember{ mutableStateOf(0f..0f) }
-        val trackProcessRecord = remember{ mutableStateOf(0f..0f) }
-
-        LaunchedEffect(valueRange) {
-            if(valueRange.endInclusive == 0f)return@LaunchedEffect
-            if(trackProcessRecord.value == 0f..0f){
-                trackProcessRecord.value = valueRange
-            }else{
-                trackProcess.value =valueRange
-            }
-        }
-        LaunchedEffect(Unit){
-            snapshotFlow { trackProcess.value }
-                .filter { it.endInclusive>0f }//第一遍是初始化的.第二遍是首次修改的
-                .distinctUntilChanged()
-                .collect{
-                    println("onValueChange===>>>2")
-                    onValueChangeState.value(
-                        value,
-                        Offset(x = rawOffset.value.coerceIn(trackStart, trackEnd), y = strokeRadius)
+            val draggableState = remember(trackStart, trackEnd, valueRange) {
+                SliderDraggableState {
+                    rawOffset.value = (rawOffset.value + it + pressOffset.value)
+                    pressOffset.value = 0f
+                    val offsetInTrack = rawOffset.value.coerceIn(trackStart, trackEnd)
+                    onValueChangeState.value.invoke(
+                        scaleToUserValue(offsetInTrack),
+                        Offset(rawOffset.value.coerceIn(trackStart, trackEnd), strokeRadius)
                     )
-                    if(!draggableState.isDragging){
-                        onValueChangeFinishedState?.invoke()
-                    }
                 }
-        }
+            }
+            CorrectValueSideEffect(
+                ::scaleToOffset, valueRange, trackStart..trackEnd, rawOffset, value
+            )
 
-        val coerced = value.coerceIn(valueRange.start, valueRange.endInclusive)
-        val fraction = calculateFraction(valueRange.start, valueRange.endInclusive, coerced)
+            val trackProcess = remember { mutableStateOf(0f..0f) }
+            val trackProcessRecord = remember { mutableStateOf(0f..0f) }
 
-        val gestureEndAction = rememberUpdatedState<(Float) -> Unit> { velocity: Float ->
-            val current = rawOffset.value
-            val target = snapValueToTick(current, tickFractions, trackStart, trackEnd)
-            if (current != target) {
-                if (tapEnabled.value){
-                    scope.launch {
-                        animateToTarget(draggableState, current, target, velocity)
-                        onValueChangeFinished?.invoke()
+            LaunchedEffect(valueRange) {
+                if (valueRange.endInclusive == 0f) return@LaunchedEffect
+                if (trackProcessRecord.value == 0f..0f) {
+                    trackProcessRecord.value = valueRange
+                } else {
+                    trackProcess.value = valueRange
+                }
+            }
+            LaunchedEffect(Unit) {
+                snapshotFlow { trackProcess.value }.filter { it.endInclusive > 0f }//第一遍是初始化的.第二遍是首次修改的
+                    .distinctUntilChanged().collect {
+                        onValueChangeState.value(
+                            value,
+                            Offset(x = rawOffset.value.coerceIn(trackStart, trackEnd), y = strokeRadius)
+                        )
+                        if (!draggableState.isDragging) {
+                            onValueChangeFinishedState?.invoke()
+                        }
                     }
-                }else{
-                    if(target<current){
+            }
+
+            val coerced = value.coerceIn(valueRange.start, valueRange.endInclusive)
+            val fraction = calculateFraction(valueRange.start, valueRange.endInclusive, coerced)
+
+            val gestureEndAction = rememberUpdatedState<(Float) -> Unit> { velocity: Float ->
+                val current = rawOffset.value
+                val target = snapValueToTick(current, tickFractions, trackStart, trackEnd)
+                if (current != target) {
+                    if (tapEnabled.value) {
                         scope.launch {
                             animateToTarget(draggableState, current, target, velocity)
                             onValueChangeFinished?.invoke()
                         }
+                    } else {
+                        if (target < current) {
+                            scope.launch {
+                                animateToTarget(draggableState, current, target, velocity)
+                                onValueChangeFinished?.invoke()
+                            }
+                        }
                     }
+                } else if (!draggableState.isDragging) {
+                    // check ifDragging in case the change is still in progress (touch -> drag case)
+                    onValueChangeFinished?.invoke()
                 }
-            } else if (!draggableState.isDragging) {
-                // check ifDragging in case the change is still in progress (touch -> drag case)
-                onValueChangeFinished?.invoke()
             }
+            val press = Modifier.sliderTapModifier(
+                draggableState = draggableState,
+                interactionSource = interactionSource,
+                maxPx = constraints.maxWidth.toFloat(),
+                isRtl = isRtl,
+                rawOffset = rawOffset,
+                gestureEndAction = gestureEndAction,
+                pressOffset = pressOffset,
+                enabled = enabled
+            )
+
+            val drag = Modifier.draggable(
+                orientation = Orientation.Horizontal,
+                reverseDirection = isRtl,
+                enabled = enabled,
+                interactionSource = interactionSource,
+                onDragStopped = { _ ->
+                    if (enabled) {
+                        onValueChangeFinishedState?.invoke()
+                    }
+                },
+                startDragImmediately = draggableState.isDragging,
+                state = draggableState
+            )
+
+            SliderImpl(
+                enabled = enabled,
+                fraction = fraction,
+                trackStart = trackStart,
+                trackEnd = trackEnd,
+                tickFractions = tickFractions,
+                colors = colors,
+                trackHeight = trackHeight,
+                thumbRadius = thumbRadiusInPx,
+                coerceThumbInTrack = coerceThumbInTrack,
+                drawInactiveTrack = drawInactiveTrack,
+                borderStroke = borderStroke,
+                modifier = press.then(drag)
+            )
         }
-        val press = Modifier.sliderTapModifier(
-            draggableState = draggableState,
-            interactionSource = interactionSource,
-            maxPx = constraints.maxWidth.toFloat(),
-            isRtl = isRtl,
-            rawOffset = rawOffset,
-            gestureEndAction = gestureEndAction,
-            pressOffset = pressOffset,
-            enabled = enabled
-        )
-
-        val drag = Modifier.draggable(
-            orientation = Orientation.Horizontal,
-            reverseDirection = isRtl,
-            enabled = enabled,
-            interactionSource = interactionSource,
-            onDragStopped = { _ ->
-                if (enabled) {
-                    onValueChangeFinishedState?.invoke()
-                }
-            },
-            startDragImmediately = draggableState.isDragging,
-            state = draggableState
-        )
-
-        SliderImpl(
-            enabled = enabled,
-            fraction = fraction,
-            trackStart = trackStart,
-            trackEnd = trackEnd,
-            tickFractions = tickFractions,
-            colors = colors,
-            trackHeight = trackHeight,
-            thumbRadius = thumbRadiusInPx,
-            coerceThumbInTrack = coerceThumbInTrack,
-            drawInactiveTrack = drawInactiveTrack,
-            borderStroke = borderStroke,
-            modifier = press.then(drag)
-        )
     }
+
 }
 
 @Composable
@@ -398,11 +380,8 @@ private fun SliderImpl(
 
     Box(
         // Constraint max height of Slider to max of thumb or track or minimum touch 48.dp
-        modifier
-            .heightIn(
-                max = trackHeight
-                    .coerceAtLeast(thumbSize)
-                    .coerceAtLeast(TrackHeight)
+        modifier.heightIn(
+                max = trackHeight.coerceAtLeast(thumbSize).coerceAtLeast(TrackHeight)
             )
     ) {
 
@@ -461,10 +440,8 @@ private fun Track(
     val debug = false
 
     // Colors for drawing track and/or ticks
-    val activeTrackColor: Brush =
-        colors.trackColor(enabled = enabled, active = true).value
-    val inactiveTrackColor: Brush =
-        colors.trackColor(enabled = enabled, active = false).value
+    val activeTrackColor: Brush = colors.trackColor(enabled = enabled, active = true).value
+    val inactiveTrackColor: Brush = colors.trackColor(enabled = enabled, active = false).value
     val inactiveTickColor = colors.tickColor(enabled, active = false).value
     val activeTickColor = colors.tickColor(enabled, active = true).value
 
@@ -477,8 +454,7 @@ private fun Track(
 
     // When coerced move edges of drawing by thumb radius to cover thumb edges in drawing
     // it needs to move to right as stroke radius minus thumb radius to match track start
-    val drawStart =
-        if (coerceThumbInTrack) trackStart - thumbRadius + strokeRadius else trackStart
+    val drawStart = if (coerceThumbInTrack) trackStart - thumbRadius + strokeRadius else trackStart
 
     Canvas(modifier = modifier) {
         val width = size.width
@@ -496,8 +472,7 @@ private fun Track(
         val sliderEnd = if (isRtl) sliderLeft else sliderRight
 
         val sliderValue = Offset(
-            sliderStart.x + (sliderEnd.x - sliderStart.x) * fraction,
-            center.y
+            sliderStart.x + (sliderEnd.x - sliderStart.x) * fraction, center.y
         )
 
         // InActive Track
@@ -540,8 +515,7 @@ private fun Track(
         }
 
         if (drawInactiveTrack) {
-            tickFractions.groupBy { it > fraction }
-                .forEach { (outsideFraction, list) ->
+            tickFractions.groupBy { it > fraction }.forEach { (outsideFraction, list) ->
                     drawPoints(
                         points = list.map {
                             Offset(lerp(sliderStart, sliderEnd, it).x, center.y)
@@ -559,24 +533,15 @@ private fun Track(
 
 @Composable
 private fun Thumb(
-    modifier: Modifier,
-    offset: Float,
-    thumbSize: Dp,
-    colors: MaterialSliderColors,
-    enabled: Boolean
+    modifier: Modifier, offset: Float, thumbSize: Dp, colors: MaterialSliderColors, enabled: Boolean
 ) {
 
     val thumbColor: Brush = colors.thumbColor(enabled).value
 
-    Spacer(
-        modifier = modifier
-            .offset { IntOffset(offset.toInt(), 0) }
-            .shadow(1.dp, shape = CircleShape)
-            .size(thumbSize)
-            .then(
-                Modifier.background(thumbColor)
-            )
-    )
+    Spacer(modifier = modifier.offset { IntOffset(offset.toInt(), 0) }
+        .shadow(1.dp, shape = CircleShape).size(thumbSize).then(
+            Modifier.background(thumbColor)
+        ))
 }
 
 @Composable
@@ -617,54 +582,45 @@ internal fun Modifier.sliderTapModifier(
     gestureEndAction: State<(Float) -> Unit>,
     pressOffset: MutableState<Float>,
     enabled: Boolean
-) = composed(
-    factory = {
-        if (enabled) {
-            val scope = rememberCoroutineScope()
-            pointerInput(draggableState, interactionSource, maxPx, isRtl) {
-                detectTapGestures(
-                    onPress = { pos ->
-                        val to = if (isRtl) maxPx - pos.x else pos.x
-                        pressOffset.value = to - rawOffset.value
-                        try {
-                            awaitRelease()
-                        } catch (_: GestureCancellationException) {
-                            pressOffset.value = 0f
-                        }
-                    },
-                    onTap = {
-                        scope.launch {
-                            draggableState.drag(MutatePriority.UserInput) {
-                                // just trigger animation, press offset will be applied
-                                dragBy(0f)
-                            }
-                            gestureEndAction.value.invoke(0f)
-                        }
+) = composed(factory = {
+    if (enabled) {
+        val scope = rememberCoroutineScope()
+        pointerInput(draggableState, interactionSource, maxPx, isRtl) {
+            detectTapGestures(onPress = { pos ->
+                val to = if (isRtl) maxPx - pos.x else pos.x
+                pressOffset.value = to - rawOffset.value
+                try {
+                    awaitRelease()
+                } catch (_: GestureCancellationException) {
+                    pressOffset.value = 0f
+                }
+            }, onTap = {
+                scope.launch {
+                    draggableState.drag(MutatePriority.UserInput) {
+                        // just trigger animation, press offset will be applied
+                        dragBy(0f)
                     }
-                )
-            }
-        } else {
-            this
+                    gestureEndAction.value.invoke(0f)
+                }
+            })
         }
-    },
-    inspectorInfo = debugInspectorInfo {
-        name = "sliderTapModifier"
-        properties["draggableState"] = draggableState
-        properties["interactionSource"] = interactionSource
-        properties["maxPx"] = maxPx
-        properties["isRtl"] = isRtl
-        properties["rawOffset"] = rawOffset
-        properties["gestureEndAction"] = gestureEndAction
-        properties["pressOffset"] = pressOffset
-        properties["enabled"] = enabled
+    } else {
+        this
     }
-)
+}, inspectorInfo = debugInspectorInfo {
+    name = "sliderTapModifier"
+    properties["draggableState"] = draggableState
+    properties["interactionSource"] = interactionSource
+    properties["maxPx"] = maxPx
+    properties["isRtl"] = isRtl
+    properties["rawOffset"] = rawOffset
+    properties["gestureEndAction"] = gestureEndAction
+    properties["pressOffset"] = pressOffset
+    properties["enabled"] = enabled
+})
 
 internal suspend fun animateToTarget(
-    draggableState: DraggableState,
-    current: Float,
-    target: Float,
-    velocity: Float
+    draggableState: DraggableState, current: Float, target: Float, velocity: Float
 ) {
     draggableState.drag {
         var latestValue = current
@@ -676,16 +632,11 @@ internal suspend fun animateToTarget(
 }
 
 internal fun snapValueToTick(
-    current: Float,
-    tickFractions: List<Float>,
-    minPx: Float,
-    maxPx: Float
+    current: Float, tickFractions: List<Float>, minPx: Float, maxPx: Float
 ): Float {
     // target is a closest anchor to the `current`, if exists
-    return tickFractions
-        .minByOrNull { abs(lerp(minPx, maxPx, it) - current) }
-        ?.run { lerp(minPx, maxPx, this) }
-        ?: current
+    return tickFractions.minByOrNull { abs(lerp(minPx, maxPx, it) - current) }
+        ?.run { lerp(minPx, maxPx, this) } ?: current
 }
 
 internal class SliderDraggableState(
@@ -702,8 +653,7 @@ internal class SliderDraggableState(
     private val scrollMutex = MutatorMutex()
 
     override suspend fun drag(
-        dragPriority: MutatePriority,
-        block: suspend DragScope.() -> Unit
+        dragPriority: MutatePriority, block: suspend DragScope.() -> Unit
     ): Unit = coroutineScope {
         isDragging = true
         scrollMutex.mutateWith(dragScope, dragPriority, block)
