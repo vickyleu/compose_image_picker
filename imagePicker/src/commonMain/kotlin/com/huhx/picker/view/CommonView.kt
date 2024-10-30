@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.PlatformContext
 import coil3.compose.LocalPlatformContext
+import com.dokar.sonner.ToastType
+import com.dokar.sonner.ToasterState
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.AssetPickerConfig
 import compose_image_picker.imagepicker.generated.resources.Res
@@ -69,7 +71,9 @@ internal fun AppBarButton(size: Int, onPicked: () -> Unit) {
 @Composable
 fun AssetImageIndicator(
     assetInfo: AssetInfo,
+    toasterState: ToasterState?,
     selected: Boolean,
+    maxFileSize: Long,
     fontSize: TextUnit = 14.sp,
     assetSelected: SnapshotStateList<AssetInfo>,
     onClicks: ((Boolean) -> Unit)? = null,
@@ -102,8 +106,11 @@ fun AssetImageIndicator(
                             return@clickable
                         }
                         if (assetSelected.size == maxAssets && isSelected) {
-                            showToast(context, errorMessage)
-
+                            toasterState?.apply { this.show(errorMessage, type = ToastType.Toast) }?:showToast(context, errorMessage)
+                            return@clickable
+                        }
+                        if(assetInfo.size > maxFileSize){
+                            toasterState?.apply { this.show("文件过大", type = ToastType.Toast) }?:showToast(context, "文件过大")
                             return@clickable
                         }
                         if (isSelected) assetSelected.add(assetInfo) else assetSelected.remove(assetInfo)

@@ -76,6 +76,7 @@ import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.dokar.sonner.ToasterState
 import com.huhx.picker.base.BasicScreen
 import com.huhx.picker.component.SelectedAssetImageItem
 import com.huhx.picker.model.AssetInfo
@@ -111,6 +112,7 @@ import org.jetbrains.compose.resources.stringResource
 
 internal class AssetPreviewScreen(
     viewModel: AssetViewModel,
+    toasterState: ToasterState?,
     index: Int,
     time: String,
     requestType: RequestType
@@ -118,6 +120,7 @@ internal class AssetPreviewScreen(
     create = {
         AssetPreviewViewModel(
             viewModel = viewModel,
+            toasterState = toasterState,
             index = index,
             time = time,
             requestType = requestType
@@ -338,12 +341,15 @@ internal class AssetPreviewScreen(
         bottomBarHeightAssign: MutableState<Dp>
     ) {
         val viewModel = LocalAssetViewModelProvider.current
+        val maxFileSize = LocalAssetConfig.current.maxFileSize
         with(LocalDensity.current) {
             SelectorBottomBar(
                 Modifier.onGloballyPositioned {
                     bottomBarHeightAssign.value = it.size.height.toDp()
                 },
+                toasterState = model.toasterState,
                 selectedList = viewModel.selectedList,
+                maxFileSize=maxFileSize,
                 assetInfo = model.assetInfo.value
             ) {
                 navigator.pop()
@@ -358,6 +364,8 @@ internal class AssetPreviewScreen(
 fun SelectorBottomBar(
     modifier: Modifier = Modifier,
     assetInfo: AssetInfo,
+    toasterState: ToasterState?,
+    maxFileSize: Long,
     selectedList: SnapshotStateList<AssetInfo>,
     onClick: (AssetInfo) -> Unit,
 ) {
@@ -378,8 +386,10 @@ fun SelectorBottomBar(
             ) {
                 AssetImageIndicator(
                     assetInfo = assetInfo,
+                    toasterState = toasterState,
                     selected = selectedList.any { it == assetInfo },
                     assetSelected = selectedList,
+                    maxFileSize=maxFileSize,
                     fontSize = 14.sp,
                 )
             }

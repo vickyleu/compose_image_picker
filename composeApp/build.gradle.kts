@@ -57,7 +57,7 @@ kotlin {
             implementation(project.dependencies.platform(libs.coil.bom))
 
             implementation(libs.compose.filepicker)
-
+            implementation(libs.compose.sonner)
 
             implementation(libs.kotlinx.datetime)
             implementation(libs.navigation.compose)

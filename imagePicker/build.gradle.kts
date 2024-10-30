@@ -69,7 +69,8 @@ kotlin {
             implementation(libs.navigation.compose)
             implementation(libs.compose.lifecycle.runtime)
 
-            implementation(libs.compose.filepicker)
+            compileOnly(libs.compose.filepicker)
+            compileOnly(libs.compose.sonner)
 
 
             implementation(libs.coil.core)

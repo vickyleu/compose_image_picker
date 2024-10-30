@@ -8,6 +8,7 @@ import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
 import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
+import com.dokar.sonner.ToasterState
 import com.github.jing332.filepicker.base.FileImpl
 import com.huhx.picker.base.LocalNavigatorController
 import com.huhx.picker.model.AssetPickerConfig
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun AssetPickerRoute(
     viewModel: AssetViewModel,
+    toasterState: ToasterState?=null,
     onPicked: (List<FileImpl>) -> Unit,
     onClose: (List<FileImpl>) -> Unit,
     assetPickerConfig: AssetPickerConfig
@@ -30,7 +32,9 @@ internal fun AssetPickerRoute(
 
     CompositionLocalProvider(LocalAssetViewModelProvider provides viewModel) {
         val startScreen = remember {
-            AssetDisplayScreen(viewModel = viewModel, onPicked = {
+            AssetDisplayScreen(viewModel = viewModel,
+                toasterState = toasterState,
+                onPicked = {
                 scope.launch {
                     val list = mutableListOf<FileImpl>()
                     list.addAll(viewModel.selectedList.mapNotNull {

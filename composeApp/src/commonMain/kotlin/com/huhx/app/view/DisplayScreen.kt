@@ -13,6 +13,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.Navigator
+import com.dokar.sonner.Toaster
+import com.dokar.sonner.rememberToasterState
 import com.github.jing332.filepicker.base.absolutePath
 import com.github.jing332.filepicker.base.inputStream
 import com.github.jing332.filepicker.base.useImpl
@@ -36,6 +38,8 @@ class DisplayScreen : BasicScreen<DisplayViewModel>(
 ) {
     @Composable
     override fun modelContent(model: DisplayViewModel, navigator: Navigator, tabbarHeight: Dp) {
+        val toasterState = rememberToasterState {
+        }
         Box(modifier = Modifier.fillMaxSize().background(Color.Black).padding(top = tabbarHeight)) {
             val viewModel: MomentViewModel = viewModel(
                 factory = MomentModelFactory(momentRepository = MomentRepository())
@@ -55,6 +59,7 @@ class DisplayScreen : BasicScreen<DisplayViewModel>(
                         }
                     }
                 },
+                toasterState = toasterState,
                 onClose = {
                     val copy = listOf(*it.toTypedArray())
                     viewModel.selectedList.clear()
@@ -79,6 +84,7 @@ class DisplayScreen : BasicScreen<DisplayViewModel>(
                         }
                     }
             }
+            Toaster(toasterState)
         }
     }
 

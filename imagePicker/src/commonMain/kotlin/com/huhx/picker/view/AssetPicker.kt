@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import coil3.compose.LocalPlatformContext
+import com.dokar.sonner.ToasterState
 import com.github.jing332.filepicker.base.FileImpl
 import com.huhx.picker.AssetPickerRoute
 import com.huhx.picker.model.AssetInfo
@@ -29,6 +30,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AssetPicker(
     assetPickerConfig: AssetPickerConfig,
+    toasterState: ToasterState?=null,
     onPicked: (List<FileImpl>) -> Unit,
     onClose: (List<FileImpl>) -> Unit,
     onLoading: @Composable (() -> Unit)? = null,
@@ -61,6 +63,7 @@ fun AssetPicker(
             CompositionLocalProvider(LocalAssetConfig provides assetPickerConfig) {
                 AssetPickerRoute(
                     viewModel = viewModel,
+                    toasterState=toasterState,
                     onPicked = onPicked,
                     onClose = onClose,
                     assetPickerConfig = assetPickerConfig

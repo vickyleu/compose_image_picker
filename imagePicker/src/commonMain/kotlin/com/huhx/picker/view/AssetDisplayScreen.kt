@@ -65,6 +65,8 @@ import cafe.adriel.voyager.navigator.internal.BackHandler
 import coil3.PlatformContext
 import coil3.Uri
 import coil3.compose.LocalPlatformContext
+import com.dokar.sonner.ToastType
+import com.dokar.sonner.ToasterState
 import com.huhx.picker.base.BasicScreen
 import com.huhx.picker.component.AssetImageItem
 import com.huhx.picker.formatDirectoryName
@@ -94,12 +96,14 @@ import org.jetbrains.compose.resources.painterResource
 
 internal class AssetDisplayScreen(
     onClose: (List<AssetInfo>) -> Unit,
+    toasterState: ToasterState? = null,
     onPicked: (List<AssetInfo>) -> Unit,
     viewModel: AssetViewModel,
     assetPickerConfig: AssetPickerConfig
 ) : BasicScreen<AssetDisplayViewModel>(create = {
     AssetDisplayViewModel(
         viewModel,
+        toasterState,
         onPicked,
         onClose,
         assetPickerConfig
@@ -136,6 +140,7 @@ internal class AssetDisplayScreen(
 
             AssetContent(
                 viewModel,
+                toasterState = model.toasterState,
                 model.assetPickerConfig.requestType,
                 initialBottomBarHeight, navigator
             )
@@ -314,6 +319,7 @@ private fun Density.DisplayBottomBar(
 @Composable
 private fun AssetContent(
     viewModel: AssetViewModel,
+    toasterState: ToasterState? = null,
     requestType: RequestType,
     padding: MutableState<Dp>,
     navigator: Navigator
@@ -376,7 +382,7 @@ private fun AssetContent(
     val dtf = remember { DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日 HH:mm:ss") }
     val flattenedList = remember(assets) {
         mutableListOf<Pair<String, AssetInfo>>().apply {
-            if(requestType != RequestType.VIDEO){
+            if (requestType != RequestType.VIDEO) {
                 add("-" to AssetInfo.Camera)
             }
             addAll((assets.toList().sortedByDescending {
@@ -417,11 +423,13 @@ private fun AssetContent(
                             .width(maxWidth)
                             .height(maxHeight)
                             .padding(horizontal = 1.dp, vertical = 1.dp),
+                        toasterState = toasterState,
                         assetInfo = assetInfo,
                         navigateToPreview = {
                             navigator.push(
                                 AssetPreviewScreen(
                                     viewModel = viewModel,
+                                    toasterState = toasterState,
                                     index = (index - 1), time = time, requestType = requestType
                                 )
                             )
@@ -452,7 +460,12 @@ private fun AssetContent(
                                                 }
                                             },
                                             onDenied = {
-                                                showToast(context, "请授予相机权限")
+                                                toasterState?.apply {
+                                                    this.show(
+                                                        "请授予相机权限",
+                                                        type = ToastType.Toast
+                                                    )
+                                                } ?: showToast(context, "请授予相机权限")
                                                 context.goToAppSetting()
                                             }
                                         )
@@ -483,12 +496,14 @@ private fun AssetContent(
 private fun AssetImage(
     modifier: Modifier = Modifier,
     assetInfo: AssetInfo,
+    toasterState: ToasterState? = null,
     selectedList: SnapshotStateList<AssetInfo>,
     navigateToPreview: () -> Unit,
     onCameraClicks: () -> Unit = {},
     onLongClick: (Boolean) -> Unit,
 ) {
     val context = LocalPlatformContext.current
+    val maxFileSize = LocalAssetConfig.current.maxFileSize
     val maxAssets = LocalAssetConfig.current.maxAssets
 
     if (assetInfo is AssetInfo.Camera) {
@@ -501,7 +516,8 @@ private fun AssetImage(
                     if (selectedList.size < maxAssets) {
                         onCameraClicks()
                     } else {
-                        showToast(context, errorMessage)
+                        toasterState?.apply { this.show(errorMessage, type = ToastType.Toast) }
+                            ?: showToast(context, errorMessage)
                     }
                 },
         ) {
@@ -551,13 +567,16 @@ private fun AssetImage(
                     if (selected.value || selectedList.size < maxAssets) {
                         onLongClick(selectResult)
                     } else {
-                        showToast(context, errorMessage)
+                        toasterState?.apply { this.show(errorMessage, type = ToastType.Toast) }
+                            ?: showToast(context, errorMessage)
                     }
                 }
             )
             AssetImageIndicator(
                 assetInfo = assetInfo,
+                toasterState = toasterState,
                 selected = selected.value,
+                maxFileSize = maxFileSize,
                 assetSelected = selectedList
             )
         }

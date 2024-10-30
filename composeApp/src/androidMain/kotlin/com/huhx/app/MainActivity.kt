@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -22,7 +21,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,13 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.navigator.Navigator
-import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
-import cafe.adriel.voyager.transitions.SlideTransition
 import com.huhx.app.ui.theme.Compose_image_pickerTheme
-import com.huhx.app.view.CameraLaunchScreen
-import com.huhx.app.view.DisplayScreen
-import com.huhx.app.view.LocalNavigatorController
 import com.huhx.picker.component.AssetImageItem
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.AssetResourceType
@@ -126,8 +118,10 @@ fun AssetImageItemPreview2() {
             ) {
                 AssetImageIndicator(
                     assetInfo = assetInfo,
+                    toasterState = null,
                     fontSize = 14.sp,
                     selected = true,
+                    maxFileSize = 10 * 1024 * 1024,
                     assetSelected = list
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -172,7 +166,9 @@ fun AssetImageIndicatorPreview() {
     Compose_image_pickerTheme {
         AssetImageIndicator(
             assetInfo = assetInfo,
+            toasterState = null,
             fontSize = 15.sp,
+            maxFileSize = 10 * 1024 * 1024,
             selected = true,
             assetSelected = list
         )
@@ -200,6 +196,10 @@ fun AssetPreviewScreenPreview() {
     selectedList.add(assetInfo)
 
     Compose_image_pickerTheme {
-        SelectorBottomBar(assetInfo = assetInfo, selectedList = selectedList, onClick = {})
+        SelectorBottomBar(assetInfo = assetInfo,
+            toasterState = null,
+            selectedList = selectedList,
+            maxFileSize = 10 * 1024 * 1024,
+            onClick = {})
     }
 }

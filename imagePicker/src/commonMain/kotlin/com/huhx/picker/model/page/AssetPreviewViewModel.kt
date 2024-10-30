@@ -3,6 +3,7 @@ package com.huhx.picker.model.page
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.dokar.sonner.ToasterState
 import com.huhx.picker.base.BasicViewModel
 import com.huhx.picker.model.DateTimeFormatterKMP
 import com.huhx.picker.model.RequestType
@@ -10,6 +11,7 @@ import com.huhx.picker.viewmodel.AssetViewModel
 
 internal class AssetPreviewViewModel(
     val viewModel: AssetViewModel,
+    val toasterState: ToasterState?,
     val index: Int,
     val time: String,
     val requestType: RequestType

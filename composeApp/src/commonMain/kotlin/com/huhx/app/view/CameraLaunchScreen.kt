@@ -1,7 +1,6 @@
 package com.huhx.app.view
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -19,6 +18,8 @@ import androidx.compose.ui.unit.Dp
 import cafe.adriel.voyager.navigator.Navigator
 import coil3.Uri
 import coil3.compose.LocalPlatformContext
+import com.dokar.sonner.ToastType
+import com.dokar.sonner.ToasterState
 import com.github.jing332.filepicker.base.FileImpl
 import com.github.jing332.filepicker.base.inputStream
 import com.github.jing332.filepicker.base.useImpl
@@ -26,7 +27,6 @@ import com.huhx.picker.model.toUri
 import com.huhx.picker.provider.AssetLoader
 import com.huhx.picker.util.LocalStoragePermission
 import com.huhx.picker.util.goToAppSetting
-import com.huhx.picker.view.CameraLauncher
 import com.huhx.picker.view.permissionHandle
 import com.huhx.picker.view.rememberCameraLauncher
 import com.huhx.picker.view.showToast
@@ -35,11 +35,11 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class CameraLaunchViewModel : BasicViewModel() {
+class CameraLaunchViewModel(val toasterState:ToasterState?) : BasicViewModel() {
 }
 
-class CameraLaunchScreen(
-) : BasicScreen<CameraLaunchViewModel>(create = { CameraLaunchViewModel() }) {
+class CameraLaunchScreen(toasterState: ToasterState? = null) :
+    BasicScreen<CameraLaunchViewModel>(create = { CameraLaunchViewModel(toasterState) }) {
     @Composable
     override fun modelContent(
         model: CameraLaunchViewModel,
@@ -55,7 +55,7 @@ class CameraLaunchScreen(
             val cameraLauncher = rememberCameraLauncher(scope, onCreate = {
                 println("cameraLauncher onCreate")
             }) { info ->
-                if (info!=null) {
+                if (info != null) {
                     scope.launch {
                         info.toUri().path?.let {
                             val buffer = ByteArray(info.size.toInt())
@@ -64,7 +64,7 @@ class CameraLaunchScreen(
                             }
                             navigator.pop()
                             println("bytesRead:  ${it} size=>${info.size.toInt()}")
-                        }?:run{
+                        } ?: run {
                             navigator.pop()
                         }
                     }
@@ -85,7 +85,7 @@ class CameraLaunchScreen(
                 }
                 val context = LocalPlatformContext.current
                 scope.launch {
-                    suspend fun getUri(): Uri?{
+                    suspend fun getUri(): Uri? {
                         return AssetLoader.insertImage(context)
                     }
                     cameraPermission = impl.checkCameraPermission()
@@ -101,23 +101,28 @@ class CameraLaunchScreen(
                                     cameraPermissionRequested = true
                                     cameraPermission = true
                                     scope.launch {
-                                        cameraLauncher.launch(context,getUri())
+                                        cameraLauncher.launch(context, getUri())
                                     }
                                 },
                                 onDenied = {
                                     cameraPermissionRequested = true
-                                    showToast(context, "请授予相机权限")
+                                    model.toasterState?.apply {
+                                        this.show(
+                                            "请授予相机权限",
+                                            type = ToastType.Toast
+                                        )
+                                    } ?: showToast(context, "请授予相机权限")
                                     context.goToAppSetting()
                                 }
                             )
                         }
                         return@launch
                     } else {
-                        if(cameraIsLaunch){
+                        if (cameraIsLaunch) {
                             return@launch
                         }
                         cameraIsLaunch = true
-                        cameraLauncher.launch(context,getUri())
+                        cameraLauncher.launch(context, getUri())
                     }
                 }
             }
