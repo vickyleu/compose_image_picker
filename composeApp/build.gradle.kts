@@ -62,8 +62,8 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.navigation.compose)
 
-//            implementation(projects.imagePicker)
-            implementation("com.vickyleu.image_picker:imagepicker:1.0.3")
+            implementation(projects.imagePicker)
+//            implementation("com.vickyleu.image_picker:imagepicker:1.0.3")
 
             implementation(libs.voyager.navigator)
             implementation(libs.voyager.screenmodel)

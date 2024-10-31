@@ -118,7 +118,7 @@ allprojects {
 
     val mavenAuthor = "vickyleu"
     val mavenGroup = "com.$mavenAuthor.$rootProjectName"
-    val mVersion = "1.0.3"
+    val mVersion = "1.0.4"
     if (project.subprojects.isNotEmpty()) return@allprojects
     val currentName = project.name.replace("$rootProjectName-", "")
     if (rootProject.name == currentName) {
