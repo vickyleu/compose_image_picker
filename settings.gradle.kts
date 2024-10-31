@@ -238,7 +238,7 @@ dependencyResolutionManagement {
 
 
         maven {
-            url = uri("https://maven.pkg.github.com/vickyleu/compose_image_picker")
+            url = uri("https://maven.pkg.github.com/vickyleu/compose_sonner")
             val properties = java.util.Properties().apply {
                 runCatching { rootProject.projectDir.resolve("local.properties") }
                     .getOrNull()

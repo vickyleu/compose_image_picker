@@ -32,25 +32,7 @@ kotlin {
 
     listOf(
         iosX64(), iosArm64(), iosSimulatorArm64()
-    ).forEach {
-        it.binaries {
-            framework {
-                baseName = "imagePicker"
-                isStatic = true
-            }
-        }
-        val path = projectDir.resolve("src/nativeInterop/cinterop/ImageObserver")
-        it.binaries.all {
-            linkerOpts("-F $path")
-            linkerOpts("-ObjC")
-        }
-        it.compilations.getByName("main") {
-            cinterops.create("ImageObserver") {
-                defFile("src/nativeInterop/cinterop/ImageObserver.def")
-                compilerOpts("-F $path")
-            }
-        }
-    }
+    )
     sourceSets {
         commonMain.get().apply {
             resources.srcDir("src/commonMain/composeResources")
@@ -96,6 +78,16 @@ kotlin {
         }
     }
 
+    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
+        binaries.all {
+            freeCompilerArgs += "-Xadd-light-debug=disable"
+        }
+        compilations.getByName("main") {
+            cinterops.create("ImageObserver") {
+                defFile("src/nativeInterop/cinterop/ImageObserver.def")
+            }
+        }
+    }
 }
 
 android {
@@ -107,12 +99,6 @@ android {
     }
     lint {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-    }
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-            withJavadocJar()
-        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.toVersion(libs.versions.jvmTarget.get())
