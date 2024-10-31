@@ -9,7 +9,7 @@ constraintlayout = "2.2.0"
 #noinspection GradleDependency
 kotlin = "2.1.0-Beta1"
 #noinspection GradleDependency
-compose-plugin = "1.7.0-rc01"
+compose-plugin = "1.7.0"
 jetpack-compose-bom = "2024.10.01"
 coroutines-bom = "1.9.0"
 coil-bom = "3.0.0-rc01"
