@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -32,12 +33,21 @@ kotlin {
     listOf(
         iosX64(), iosArm64(), iosSimulatorArm64()
     ).forEach {
+        it.binaries {
+            framework {
+                baseName = "imagepicker"
+                isStatic = true
+            }
+        }
+        val path = projectDir.resolve("src/nativeInterop/cinterop/Observer")
         it.binaries.all {
-            freeCompilerArgs += "-Xadd-light-debug=disable"
+            linkerOpts("-F $path")
+            linkerOpts("-ObjC")
         }
         it.compilations.getByName("main") {
             cinterops.create("Observer") {
                 defFile("src/nativeInterop/cinterop/Observer.def")
+                compilerOpts("-F $path")
             }
         }
     }
@@ -85,6 +95,7 @@ kotlin {
             implementation(libs.androidx.constraintlayout)
         }
     }
+
 }
 
 android {
@@ -96,6 +107,12 @@ android {
     }
     lint {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
+    }
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.toVersion(libs.versions.jvmTarget.get())
