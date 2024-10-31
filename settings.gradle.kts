@@ -169,6 +169,32 @@ dependencyResolutionManagement {
                 excludeGroupByRegex("org.jetbrains.compose.*")
             }
         }
+
+        maven {
+            url = uri("https://maven.pkg.github.com/vickyleu/compose_sonner")
+            val properties = java.util.Properties().apply {
+                runCatching { rootProject.projectDir.resolve("local.properties") }
+                    .getOrNull()
+                    .takeIf { it?.exists() ?: false }
+                    ?.reader()
+                    ?.use(::load)
+            }
+            val environment: Map<String, String?> = System.getenv()
+            extra["githubToken"] = properties["github.token"] as? String
+                ?: environment["GITHUB_TOKEN"] ?: ""
+            credentials {
+                username = "vickyleu"
+                password = extra["githubToken"]?.toString()
+            }
+            content {
+                excludeGroupByRegex("com.finogeeks.*")
+                excludeGroupByRegex("org.jogamp.*")
+                excludeGroupByRegex("org.jetbrains.compose.*")
+                excludeGroupByRegex("(?!com|cn).github.(?!vickyleu).*")
+            }
+        }
+
+
         maven {
             setUrl("https://repo1.maven.org/maven2/")
             content {
@@ -237,29 +263,6 @@ dependencyResolutionManagement {
         }
 
 
-        maven {
-            url = uri("https://maven.pkg.github.com/vickyleu/compose_sonner")
-            val properties = java.util.Properties().apply {
-                runCatching { rootProject.projectDir.resolve("local.properties") }
-                    .getOrNull()
-                    .takeIf { it?.exists() ?: false }
-                    ?.reader()
-                    ?.use(::load)
-            }
-            val environment: Map<String, String?> = System.getenv()
-            extra["githubToken"] = properties["github.token"] as? String
-                ?: environment["GITHUB_TOKEN"] ?: ""
-            credentials {
-                username = "vickyleu"
-                password = extra["githubToken"]?.toString()
-            }
-            content {
-                excludeGroupByRegex("com.finogeeks.*")
-                excludeGroupByRegex("org.jogamp.*")
-                excludeGroupByRegex("org.jetbrains.compose.*")
-                excludeGroupByRegex("(?!com|cn).github.(?!vickyleu).*")
-            }
-        }
 
     }
 }
