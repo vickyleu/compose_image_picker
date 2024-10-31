@@ -31,20 +31,23 @@ kotlin {
     }
 
     listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
+        iosX64(), iosArm64(), iosSimulatorArm64()
     ).forEach {
-        // 包含 Objective-C 文件
-        it.compilerOptions {
-
+        it.binaries {
+            framework {
+                baseName = "imagePicker"
+                isStatic = true
+            }
         }
-    }
-
-    targets.withType<KotlinNativeTarget> {
-        compilations.getByName("main") {
-            cinterops.create("observer") {
-                definitionFile = projectDir.resolve("src/nativeInterop/cinterop/observer.def")
+        val path = projectDir.resolve("src/nativeInterop/cinterop/ImageObserver")
+        it.binaries.all {
+            linkerOpts("-F $path")
+            linkerOpts("-ObjC")
+        }
+        it.compilations.getByName("main") {
+            cinterops.create("ImageObserver") {
+                defFile("src/nativeInterop/cinterop/ImageObserver.def")
+                compilerOpts("-F $path")
             }
         }
     }
@@ -83,7 +86,6 @@ kotlin {
             implementation(libs.voyager.transitions)
 
         }
-
         androidMain.dependencies {
             implementation(libs.androidx.media3.exoplayer)
             implementation(libs.androidx.media3.ui)
@@ -92,12 +94,7 @@ kotlin {
             implementation(libs.coil.gif)
             implementation(libs.androidx.constraintlayout)
         }
-
-        iosMain.get().apply {
-        }
     }
-
-
 
 }
 

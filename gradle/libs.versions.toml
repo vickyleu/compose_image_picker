@@ -5,12 +5,12 @@ android-minSdk = "24"
 android-compileSdk = "34"
 android-targetSdk = "33"
 
-constraintlayout = "2.1.4"
-kotlin = "2.0.20"
+constraintlayout = "2.2.0"
 #noinspection GradleDependency
-compose-plugin = "1.7.0-beta02"
-
-jetpack-compose-bom = "2024.10.00"
+kotlin = "2.1.0-Beta1"
+#noinspection GradleDependency
+compose-plugin = "1.7.0-rc01"
+jetpack-compose-bom = "2024.10.01"
 coroutines-bom = "1.9.0"
 coil-bom = "3.0.0-rc01"
 jvmTarget = "17"
@@ -36,10 +36,10 @@ navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-co
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "jetpack-compose-bom" }
 coroutines-bom = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-bom", version.ref = "coroutines-bom" }
 coil-bom = { module = "io.coil-kt.coil3:coil-bom", version.ref = "coil-bom" }
-coil-core = { module = "io.coil-kt.coil3:coil"}
-coil-compose = { module = "io.coil-kt.coil3:coil-compose"}
-coil-video = { module = "io.coil-kt.coil3:coil-video"}
-coil-gif = { module = "io.coil-kt.coil3:coil-gif"}
+coil-core = { module = "io.coil-kt.coil3:coil" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose" }
+coil-video = { module = "io.coil-kt.coil3:coil-video" }
+coil-gif = { module = "io.coil-kt.coil3:coil-gif" }
 
 voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "compose-voyager" }
 voyager-screenmodel = { module = "cafe.adriel.voyager:voyager-screenmodel", version.ref = "compose-voyager" }
