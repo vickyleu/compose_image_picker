@@ -31,7 +31,16 @@ kotlin {
 
     listOf(
         iosX64(), iosArm64(), iosSimulatorArm64()
-    )
+    ).forEach {
+        it.binaries.all {
+            freeCompilerArgs += "-Xadd-light-debug=disable"
+        }
+        it.compilations.getByName("main") {
+            cinterops.create("Observer") {
+                defFile("src/nativeInterop/cinterop/Observer.def")
+            }
+        }
+    }
     sourceSets {
         commonMain.get().apply {
             resources.srcDir("src/commonMain/composeResources")
@@ -74,17 +83,6 @@ kotlin {
             implementation(libs.coil.video)
             implementation(libs.coil.gif)
             implementation(libs.androidx.constraintlayout)
-        }
-    }
-
-    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
-        binaries.all {
-            freeCompilerArgs += "-Xadd-light-debug=disable"
-        }
-        compilations.getByName("main") {
-            cinterops.create("Observer") {
-                defFile("src/nativeInterop/cinterop/Observer.def")
-            }
         }
     }
 }
