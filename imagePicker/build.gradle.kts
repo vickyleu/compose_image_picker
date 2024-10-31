@@ -1,7 +1,6 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -83,8 +82,8 @@ kotlin {
             freeCompilerArgs += "-Xadd-light-debug=disable"
         }
         compilations.getByName("main") {
-            cinterops.create("ImageObserver") {
-                defFile("src/nativeInterop/cinterop/ImageObserver.def")
+            cinterops.create("Observer") {
+                defFile("src/nativeInterop/cinterop/Observer.def")
             }
         }
     }
