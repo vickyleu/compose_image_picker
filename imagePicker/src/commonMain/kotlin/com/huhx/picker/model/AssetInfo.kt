@@ -1,5 +1,6 @@
 package com.huhx.picker.model
 
+import coil3.PlatformContext
 import coil3.Uri
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
@@ -21,8 +22,9 @@ expect class DateTimeFormatterKMP {
         fun LocalDateTime.format(formatter: DateTimeFormatterKMP): String
         fun ofPattern(pattern: String): DateTimeFormatterKMP
     }
+
     fun format(localDateTime: LocalDateTime): String
-    fun parse(time: String):LocalDateTime
+    fun parse(time: String): LocalDateTime
 }
 
 open class AssetInfo(
@@ -40,6 +42,10 @@ open class AssetInfo(
     fun isImage(): Boolean {
         return mediaType == MediaStoreKMP.Files.FileColumns.MEDIA_TYPE_IMAGE
     }
+
+    open fun checkIfVideoNotDownload(context: PlatformContext,callback: (Uri) -> Unit = {}) {
+    }
+
 
     fun isGif(): Boolean {
         return mimeType == "image/gif"

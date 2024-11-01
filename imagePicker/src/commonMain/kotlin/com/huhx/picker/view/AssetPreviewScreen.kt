@@ -43,6 +43,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,6 +65,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -289,8 +291,9 @@ internal class AssetPreviewScreen(
                             } else {
                                 stringResource(Res.string.preview_title_video)
                             },
-                            style = MaterialTheme.typography.bodyLarge.copy(
+                            style = LocalTextStyle.current.copy(
                                 fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
                                 color = Color.White
                             )
                         )
@@ -304,7 +307,7 @@ internal class AssetPreviewScreen(
                         }
                         Text(
                             text = dateStringState.value,
-                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
+                            style = LocalTextStyle.current.copy(color = Color.Gray)
                         )
                     }
                     Box(
@@ -322,7 +325,7 @@ internal class AssetPreviewScreen(
                             modifier = Modifier.wrapContentHeight().wrapContentWidth()
                                 .padding(horizontal = 4.dp),
                             text = "${model.pageIndex.value + 1}/${model.assets.size}",
-                            style = MaterialTheme.typography.bodyLarge.copy(
+                            style = LocalTextStyle.current.copy(
                                 fontSize = 18.sp,
                                 color = Color.White
                             )
@@ -452,10 +455,7 @@ private fun VideoItem(
     page: Int,
     pagerState: PagerState
 ) {
-    if(asset.isImage())return
-
     val isCurrentPage = page == pagerState.currentPage
-
     val isToolbarVisible = remember { mutableStateOf(true) }
     val isLoaded = remember { mutableStateOf(true) }
     val isPlaying = remember { mutableStateOf(false) }
@@ -505,9 +505,8 @@ private fun VideoItem(
             duration = duration,
             isCurrentPage = isCurrentPage // 判断当前页面
         )
-
         val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
-        if (isCurrentPage) {
+        if (isCurrentPage && asset.isVideo()) {
             // 显示加载状态
             if (isLoaded.value) {
                 Box(modifier = Modifier.align(Alignment.Center)) {
@@ -668,7 +667,6 @@ private fun VideoItem(
                 }
             }
         }
-
     }
 }
 

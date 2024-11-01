@@ -87,6 +87,7 @@ import compose_image_picker.imagepicker.generated.resources.icon_camera
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -404,6 +405,17 @@ private fun AssetContent(
 
     LaunchedEffect(Unit) {
         cameraPermission = impl.checkCameraPermission()
+    }
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.selectedList.toList() }  // 监听 selectedList 的拷贝，确保是新集合触发
+            .distinctUntilChanged()
+            .collect { list ->
+                list.lastOrNull()?.apply {
+                    // 检查是否需要下载
+                    checkIfVideoNotDownload(context)
+                }
+            }
     }
 
     LazyVerticalGrid(

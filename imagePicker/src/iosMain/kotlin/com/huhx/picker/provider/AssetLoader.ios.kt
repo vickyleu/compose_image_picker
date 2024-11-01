@@ -6,7 +6,6 @@ import coil3.toUri
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.MediaStoreKMP
 import com.huhx.picker.model.RequestType
-import com.huhx.picker.model.toUri
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -14,9 +13,10 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 import platform.AVFoundation.AVURLAsset
+import platform.Foundation.NSError
+import platform.Foundation.NSLog
 import platform.Foundation.NSPredicate
 import platform.Foundation.NSSortDescriptor
 import platform.Foundation.NSString
@@ -37,13 +37,16 @@ import platform.Photos.PHCachingImageManager
 import platform.Photos.PHContentEditingInputRequestOptions
 import platform.Photos.PHFetchOptions
 import platform.Photos.PHFetchResult
+import platform.Photos.PHImageErrorKey
 import platform.Photos.PHPhotoLibrary
+import platform.Photos.PHVideoRequestOptions
+import platform.Photos.PHVideoRequestOptionsDeliveryModeFastFormat
 import platform.Photos.requestContentEditingInputWithOptions
 
 actual abstract class AssetLoader {
 
     actual companion object {
-        private val platform.Photos.PHAssetMediaType.convertMediaType: Int
+        val platform.Photos.PHAssetMediaType.convertMediaType: Int
             get() {
                 return when (this) {
                     PHAssetMediaTypeImage -> MediaStoreKMP.Files.FileColumns.MEDIA_TYPE_IMAGE
@@ -253,6 +256,58 @@ actual abstract class AssetLoader {
 
         private val innerScope = MainScope()
 
+        override fun checkIfVideoNotDownload(context: PlatformContext,callback: (Uri) -> Unit) {
+            if (_filePath.isEmpty()) {
+                queryJob?.cancel()
+                queryJob=innerScope.launch {
+                    withContext(Dispatchers.IO){
+                        val assets = id.toPHAsset()
+                        val filePath = assets?.let {
+                            val completer = CompletableDeferred<String>()
+                            println("videoPreview fetch mediaType ${it.mediaType == PHAssetMediaTypeVideo} mediaType=${it.mediaType} PHAssetMediaTypeVideo=${PHAssetMediaTypeVideo}")
+                            when(it.mediaType){
+                                PHAssetMediaTypeImage -> {
+                                    it.requestContentEditingInputWithOptions(options = PHContentEditingInputRequestOptions.new()) {
+                                            contentEditingInput, info ->
+                                        val imageURL = contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
+                                        completer.complete(imageURL)
+                                    }
+                                }
+                                PHAssetMediaTypeVideo -> {
+                                    val options = PHVideoRequestOptions().apply {
+                                        setNetworkAccessAllowed(true)  // 允许使用网络下载 iCloud 视频
+                                        deliveryMode = PHVideoRequestOptionsDeliveryModeFastFormat  // 获取快速格式的视频
+                                    }
+                                    PHCachingImageManager.defaultManager().requestAVAssetForVideo(
+                                        it,
+                                        options = options,
+                                        resultHandler = { avAsset, _, info ->
+                                            println("videoPreview fetch avAsset ${avAsset} mediaType=${it.mediaType} info=${info}")
+                                            if(avAsset is AVURLAsset){
+                                                val videoURL = avAsset.URL.absoluteString ?: ""
+                                                completer.complete(videoURL)
+                                                callback(videoURL.toUri())
+                                            }else{
+                                                // 检查 info 是否包含具体错误信息
+                                                val errorMessage = info?.get(PHImageErrorKey) as? NSError
+                                                NSLog("VideoPreview Failed to load video asset: ${errorMessage?.localizedDescription}")
+                                                completer.complete("")
+                                            }
+                                        })
+                                }
+                                else -> {
+                                    completer.complete("")
+                                }
+                            }
+                            completer.await()
+                        } ?: ""
+                        _filePath = filePath
+                    }
+                }
+            }
+        }
+
+
         private var queryJob2:Job? = null
         private var queryJob:Job? = null
         override val filepath: String
@@ -274,13 +329,23 @@ actual abstract class AssetLoader {
                                         }
                                     }
                                     PHAssetMediaTypeVideo -> {
+                                        val options = PHVideoRequestOptions().apply {
+                                            setNetworkAccessAllowed(true)  // 允许使用网络下载 iCloud 视频
+                                            deliveryMode = PHVideoRequestOptionsDeliveryModeFastFormat  // 获取快速格式的视频
+                                        }
                                         PHCachingImageManager.defaultManager().requestAVAssetForVideo(
                                             it,
-                                            options = null,
-                                            resultHandler = { avAsset, _, _ ->
-                                                val avUrlAsset = avAsset as AVURLAsset
-                                                val videoURL = avUrlAsset.URL.absoluteString ?: ""
-                                                completer.complete(videoURL)
+                                            options = options,
+                                            resultHandler = { avAsset, _, info ->
+                                                if(avAsset is AVURLAsset){
+                                                    val videoURL = avAsset.URL.absoluteString ?: ""
+                                                    completer.complete(videoURL)
+                                                }else{
+                                                    // 检查 info 是否包含具体错误信息
+                                                    val errorMessage = info?.get(PHImageErrorKey) as? NSError
+                                                    NSLog("VideoPreview Failed to load video asset: ${errorMessage?.localizedDescription}")
+                                                    completer.complete("")
+                                                }
                                             })
                                     }
                                     else -> {

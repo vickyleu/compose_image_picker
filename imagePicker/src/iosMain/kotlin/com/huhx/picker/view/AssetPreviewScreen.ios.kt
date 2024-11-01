@@ -1,5 +1,6 @@
 package com.huhx.picker.view
 
+import ImageObserver.ImageObserverProtocol
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -21,6 +22,7 @@ import androidx.compose.ui.viewinterop.UIKitView
 import coil3.ImageLoader
 import coil3.Uri
 import coil3.annotation.ExperimentalCoilApi
+import coil3.compose.LocalPlatformContext
 import coil3.decode.DataSource
 import coil3.decode.ImageSource
 import coil3.fetch.FetchResult
@@ -34,6 +36,8 @@ import coil3.size.pxOrElse
 import coil3.toBitmap
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.provider.AssetLoader
+import com.huhx.picker.provider.AssetLoader.AssetInfoImpl
+import com.huhx.picker.provider.AssetLoader.Companion.convertMediaType
 import com.huhx.picker.provider.AssetLoader.Companion.uriString
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.COpaquePointer
@@ -52,7 +56,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import ImageObserver.ImageObserverProtocol
 import okio.Buffer
 import okio.BufferedSource
 import okio.FileSystem
@@ -66,7 +69,6 @@ import platform.AVFoundation.AVPlayerLayer
 import platform.AVFoundation.AVPlayerTimeControlStatusPaused
 import platform.AVFoundation.AVPlayerTimeControlStatusPlaying
 import platform.AVFoundation.AVPlayerTimeControlStatusWaitingToPlayAtSpecifiedRate
-import platform.AVFoundation.AVURLAsset
 import platform.AVFoundation.addPeriodicTimeObserverForInterval
 import platform.AVFoundation.currentItem
 import platform.AVFoundation.currentTime
@@ -96,7 +98,6 @@ import platform.Foundation.timeIntervalSince1970
 import platform.Foundation.valueForKey
 import platform.Photos.PHAsset
 import platform.Photos.PHAssetMediaTypeImage
-import platform.Photos.PHCachingImageManager
 import platform.Photos.PHFetchOptions
 import platform.Photos.PHImageContentModeAspectFill
 import platform.Photos.PHImageManager
@@ -145,25 +146,39 @@ actual fun videoPreview(
         }
     }
     val scope = rememberCoroutineScope()
+    val context = LocalPlatformContext.current
     DisposableEffect(Unit) {
         val job = scope.launch {
             withContext(Dispatchers.IO) {
-                val identifier = uriString.replace("phasset://", "")
-                val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(identifier), null)
-                val asset = (fetchResult.firstObject() as? PHAsset)
-                if (asset != null) {
-                    PHCachingImageManager.defaultManager().requestAVAssetForVideo(
-                        asset,
-                        options = null,
-                        resultHandler = { avAsset, _, _ ->
-                            if(avAsset is AVURLAsset){
-                                val avUrlAsset = avAsset as AVURLAsset
-                                val playerItem = AVPlayerItem(uRL = avUrlAsset.URL)
-                                item.value = playerItem
-                            }else{
-                                isLoaded.value = false
-                            }
-                        })
+                if (uriString.startsWith("phasset://")) {
+                    val identifier = uriString.replace("phasset://", "")
+                    val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(identifier), null)
+                    val asset = (fetchResult.firstObject() as? PHAsset)
+                    println("videoPreview fetch asset ${asset?.localIdentifier}")
+                    if (asset != null) {
+                        val fileName = asset.valueForKey("filename") as? String ?: ""
+                        val mimeType = "image/jpeg" // 根据需要设置MIME类型
+                        val assetImpl = AssetInfoImpl(
+                            id = asset.localIdentifier,
+                            uriString = NSURL(string = "phasset://${asset.localIdentifier}").uriString,
+                            filename = fileName,
+                            date = asset.creationDate?.timeIntervalSince1970?.toLong()
+                                ?.times(1000) ?: 0L,
+                            mediaType = asset.mediaType.convertMediaType,
+                            mimeType = mimeType,
+                            duration = (asset.duration * 1000F).toLong(),
+                            directory = "Photo",// iOS上没有直接的文件目录
+                        )
+                        assetImpl.checkIfVideoNotDownload(context) {
+                            println("videoPreview fetch path ${it.path}")
+                            val playerItem = AVPlayerItem(uRL = NSURL(string = it.path ?: ""))
+                            item.value = playerItem
+                        }
+                    }
+                }else{
+                    println("videoPreview fetch uriString ${uriString}")
+                    val playerItem = AVPlayerItem(uRL = NSURL(string = uriString))
+                    item.value = playerItem
                 }
             }
         }
@@ -362,8 +377,8 @@ actual fun videoPreview(
 }
 
 
-internal class Observer(private val eventListener: PlayerEventListener) : NSObject()
-    ,ImageObserverProtocol {
+internal class Observer(private val eventListener: PlayerEventListener) : NSObject(),
+    ImageObserverProtocol {
 
     override fun observeValueForKeyPath(
         keyPath: String?,

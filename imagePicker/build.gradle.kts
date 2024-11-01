@@ -1,14 +1,14 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
+    id(libs.plugins.kotlin.multiplatform.get().pluginId)
+    id(libs.plugins.android.library.get().pluginId)
+    id(libs.plugins.kotlin.parcelize.get().pluginId)
+
     id(libs.plugins.jetbrains.compose.get().pluginId)
     alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.kotlin.parcelize)
 }
 
 kotlin {
@@ -36,7 +36,8 @@ kotlin {
         it.binaries {
             framework {
                 baseName = "imagepicker"
-                isStatic = true
+                isStatic = false
+                export(project(":composeApp"))
             }
         }
         val path = projectDir.resolve("src/nativeInterop/cinterop/ImageObserver")
@@ -69,7 +70,7 @@ kotlin {
             implementation(project.dependencies.platform(libs.coil.bom))
 
             implementation(libs.kotlinx.datetime)
-            implementation(libs.navigation.compose)
+            implementation(libs.compose.navigation)
             implementation(libs.compose.lifecycle.runtime)
 
             compileOnly(libs.compose.filepicker)
@@ -92,12 +93,17 @@ kotlin {
             implementation(libs.accompanist.permissions)
             implementation(libs.coil.video)
             implementation(libs.coil.gif)
-            implementation(libs.androidx.constraintlayout)
         }
     }
 
 }
 
+
+compose.resources{
+    publicResClass = false
+    packageOfResClass = "compose_image_picker.imagepicker.generated.resources"
+    generateResClass = always
+}
 android {
     namespace = "com.huhx.picker"
     compileSdk = libs.versions.android.compileSdk.get().toInt()

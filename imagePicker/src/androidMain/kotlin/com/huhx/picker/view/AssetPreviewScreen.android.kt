@@ -30,6 +30,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.request.ImageRequest
+import com.huhx.picker.model.AssetInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive

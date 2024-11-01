@@ -1,6 +1,7 @@
 package com.huhx.picker.util
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -53,7 +54,7 @@ actual class StoragePermissionUtil actual constructor(
             launcherScope = (context as ComponentActivity).registerForActivityResult(
                 ActivityResultContracts.StartActivityForResult()
             ) {
-                if (it.resultCode == ComponentActivity.RESULT_OK) {
+                if (it.resultCode == Activity.RESULT_OK) {
                     scope.launch {
                         flow.emit(Environment.isExternalStorageManager())
                     }
