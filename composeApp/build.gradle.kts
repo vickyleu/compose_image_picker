@@ -9,7 +9,6 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.parcelize)
 }
-
 kotlin {
     compilerOptions {
         freeCompilerArgs = listOf(
@@ -62,8 +61,8 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.navigation.compose)
 
-            implementation(projects.imagePicker)
-//            implementation("com.vickyleu.image_picker:imagepicker:1.0.3")
+//            implementation(projects.imagePicker)
+            implementation("com.vickyleu.image_picker:imagepicker:1.0.2")
 
             implementation(libs.voyager.navigator)
             implementation(libs.voyager.screenmodel)

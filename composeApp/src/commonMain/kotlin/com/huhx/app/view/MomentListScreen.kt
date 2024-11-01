@@ -98,7 +98,8 @@ fun MomentItem(moment: Moment) {
             GridViewImages(moment.images.split(","))
             Spacer(modifier = Modifier.height(8.dp))
         }
-        Divider(thickness = 16.dp, color = Color.White)
+
+		Divider(thickness = 16.dp, color = Color.White)
     }
 }
 

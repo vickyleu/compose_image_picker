@@ -52,7 +52,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import Observer.ObserverProtocol
+import ImageObserver.ImageObserverProtocol
 import okio.Buffer
 import okio.BufferedSource
 import okio.FileSystem
@@ -359,7 +359,7 @@ actual fun videoPreview(
 
 
 internal class Observer(private val eventListener: PlayerEventListener) : NSObject()
-    ,ObserverProtocol {
+    ,ImageObserverProtocol {
 
     override fun observeValueForKeyPath(
         keyPath: String?,

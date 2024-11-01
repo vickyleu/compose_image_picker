@@ -171,7 +171,7 @@ dependencyResolutionManagement {
         }
 
         maven {
-            url = uri("https://maven.pkg.github.com/vickyleu/compose_sonner")
+            url = uri("https://maven.pkg.github.com/vickyleu/compose-multiplatform-core")
             val properties = java.util.Properties().apply {
                 runCatching { rootProject.projectDir.resolve("local.properties") }
                     .getOrNull()
@@ -185,6 +185,10 @@ dependencyResolutionManagement {
             credentials {
                 username = "vickyleu"
                 password = extra["githubToken"]?.toString()
+            }
+            // github packages cached previously downloaded artifacts, we need to redirect to the maven pom metadata
+            metadataSources {
+                mavenPom()
             }
             content {
                 excludeGroupByRegex("com.finogeeks.*")

@@ -2,7 +2,7 @@ language = Objective-C
 ---
 #import <Foundation/Foundation.h>
 
-@protocol Observer
+@protocol ImageObserver
 @required
 - (void)observeValueForKeyPath:(NSString *)keyPath
     ofObject:(id)object

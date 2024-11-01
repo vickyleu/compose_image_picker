@@ -39,14 +39,14 @@ kotlin {
                 isStatic = true
             }
         }
-        val path = projectDir.resolve("src/nativeInterop/cinterop/Observer")
+        val path = projectDir.resolve("src/nativeInterop/cinterop/ImageObserver")
         it.binaries.all {
             linkerOpts("-F $path")
             linkerOpts("-ObjC")
         }
         it.compilations.getByName("main") {
-            cinterops.create("Observer") {
-                defFile("src/nativeInterop/cinterop/Observer.def")
+            cinterops.create("ImageObserver") {
+                defFile("src/nativeInterop/cinterop/ImageObserver.def")
                 compilerOpts("-F $path")
             }
         }

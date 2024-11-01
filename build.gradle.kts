@@ -44,23 +44,15 @@ plugins {
 allprojects {
     configurations.all {
         resolutionStrategy {
-            /*eachDependency {
-                if (requested.group == "org.jetbrains.kotlin") {
-                    useVersion(libs.versions.kotlin.get())
-                }else if (requested.group.startsWith("org.jetbrains.compose")||requested.group.startsWith("androidx.compose")) {
-                    useVersion(libs.versions.compose.plugin.get())
-                }  else if (requested.group.startsWith("org.jetbrains.kotlinx") && requested.name.startsWith("kotlinx-coroutines")) {
-                    useVersion(libs.versions.coroutines.bom.get())
-                }
-            }*/
             // preferProjectModules的作用是优先使用项目中的模块，而不是从远程仓库中下载
 //            preferProjectModules()
-            /*  // cacheDynamicVersionsFor的作用是缓存动态版本，避免每次构建都去下载
-              cacheDynamicVersionsFor(0, TimeUnit.SECONDS)
-              // cacheChangingModulesFor的作用是缓存变化的模块，避免每次构建都去下载
-              cacheChangingModulesFor(0, TimeUnit.SECONDS)
-              // failOnVersionConflict的作用是当版本冲突时，抛出异常
-  //            failOnVersionConflict()*/
+            this.disableDependencyVerification()
+             // cacheDynamic0VersionsFor的作用是缓存动态版本，避免每次构建都去下载
+             cacheDynamicVersionsFor(1, TimeUnit.MILLISECONDS)
+             // cacheChangingModulesFor的作用是缓存变化的模块，避免每次构建都去下载
+             cacheChangingModulesFor(1, TimeUnit.MILLISECONDS)
+             // failOnVersionConflict的作用是当版本冲突时，抛出异常
+ //            failOnVersionConflict()
         }
     }
     tasks.withType<KotlinCompile>().all {
@@ -118,7 +110,7 @@ allprojects {
 
     val mavenAuthor = "vickyleu"
     val mavenGroup = "com.$mavenAuthor.$rootProjectName"
-    val mVersion = "1.0.4"
+    val mVersion = "1.0.2"
     if (project.subprojects.isNotEmpty()) return@allprojects
     val currentName = project.name.replace("$rootProjectName-", "")
     if (rootProject.name == currentName) {
