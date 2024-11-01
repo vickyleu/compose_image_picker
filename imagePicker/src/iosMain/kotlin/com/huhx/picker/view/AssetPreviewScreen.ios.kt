@@ -156,9 +156,13 @@ actual fun videoPreview(
                         asset,
                         options = null,
                         resultHandler = { avAsset, _, _ ->
-                            val avUrlAsset = avAsset as AVURLAsset
-                            val playerItem = AVPlayerItem(uRL = avUrlAsset.URL)
-                            item.value = playerItem
+                            if(avAsset is AVURLAsset){
+                                val avUrlAsset = avAsset as AVURLAsset
+                                val playerItem = AVPlayerItem(uRL = avUrlAsset.URL)
+                                item.value = playerItem
+                            }else{
+                                isLoaded.value = false
+                            }
                         })
                 }
             }

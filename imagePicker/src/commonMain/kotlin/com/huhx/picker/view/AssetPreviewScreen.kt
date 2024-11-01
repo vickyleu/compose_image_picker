@@ -452,6 +452,7 @@ private fun VideoItem(
     page: Int,
     pagerState: PagerState
 ) {
+    if(asset.isImage())return
 
     val isCurrentPage = page == pagerState.currentPage
 
