@@ -31,12 +31,10 @@ import java.util.Properties
 import java.util.concurrent.Executors
 
 plugins {
-    id(libs.plugins.android.application.get().pluginId).apply(false) //.get().pluginId
-    id(libs.plugins.android.library.get().pluginId).apply(false)
-    id(libs.plugins.kotlin.multiplatform.get().pluginId).apply(false)
-    id(libs.plugins.kotlin.parcelize.get().pluginId).apply(false)
-
-
+    alias(libs.plugins.android.application).apply(false)
+    alias(libs.plugins.android.library).apply(false)
+    alias(libs.plugins.kotlin.multiplatform).apply(false)
+    alias(libs.plugins.kotlin.parcelize).apply(false)
     alias(libs.plugins.jetbrains.compose).apply(false)
     alias(libs.plugins.compose.compiler).apply(false)
     alias(libs.plugins.dokka)
@@ -50,9 +48,9 @@ allprojects {
 //            preferProjectModules()
             this.disableDependencyVerification()
              // cacheDynamic0VersionsFor的作用是缓存动态版本，避免每次构建都去下载
-             cacheDynamicVersionsFor(1, TimeUnit.MILLISECONDS)
-             // cacheChangingModulesFor的作用是缓存变化的模块，避免每次构建都去下载
-             cacheChangingModulesFor(1, TimeUnit.MILLISECONDS)
+//             cacheDynamicVersionsFor(1, TimeUnit.MILLISECONDS)
+//             // cacheChangingModulesFor的作用是缓存变化的模块，避免每次构建都去下载
+//             cacheChangingModulesFor(1, TimeUnit.MILLISECONDS)
              // failOnVersionConflict的作用是当版本冲突时，抛出异常
  //            failOnVersionConflict()
         }

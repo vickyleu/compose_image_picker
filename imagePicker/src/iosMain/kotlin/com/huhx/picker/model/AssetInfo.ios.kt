@@ -30,10 +30,7 @@ import platform.Photos.PHCachingImageManager
 import platform.Photos.PHContentEditingInputRequestOptions
 import platform.Photos.PHImageErrorKey
 import platform.Photos.PHVideoRequestOptions
-import platform.Photos.PHVideoRequestOptionsDeliveryMode
 import platform.Photos.PHVideoRequestOptionsDeliveryModeFastFormat
-import platform.Photos.PHVideoRequestOptionsDeliveryModeHighQualityFormat
-import platform.Photos.PHVideoRequestOptionsDeliveryModeMediumQualityFormat
 import platform.Photos.requestContentEditingInputWithOptions
 
 actual class MediaStoreKMP {
@@ -134,14 +131,20 @@ actual suspend fun AssetInfo.toUri(): Uri {
                 }
                 when (asset.mediaType) {
                     PHAssetMediaTypeImage -> {
-                        asset.requestContentEditingInputWithOptions(options = PHContentEditingInputRequestOptions.new()) { contentEditingInput, info ->
-                            val imageURL = contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
+                        val options = PHContentEditingInputRequestOptions().apply {
+                            canHandleAdjustmentData = { _ -> true }
+                            this.setNetworkAccessAllowed(true)
+                        }
+                        asset.requestContentEditingInputWithOptions(options = options) { contentEditingInput, info ->
+                            val imageURL =
+                                contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
                             if (this@toUri is AssetLoader.AssetInfoImpl) {
                                 this@toUri.setFilePath(imageURL)
                             }
                             completer.complete(imageURL)
                         }
                     }
+
                     PHAssetMediaTypeVideo -> {
                         val options = PHVideoRequestOptions().apply {
                             setNetworkAccessAllowed(true)  // 允许使用网络下载 iCloud 视频
@@ -151,13 +154,13 @@ actual suspend fun AssetInfo.toUri(): Uri {
                             asset,
                             options = options,
                             resultHandler = { avAsset, _, info ->
-                                if(avAsset is AVURLAsset){
+                                if (avAsset is AVURLAsset) {
                                     val videoURL = avAsset.URL.absoluteString ?: ""
                                     if (this@toUri is AssetLoader.AssetInfoImpl) {
                                         this@toUri.setFilePath(videoURL)
                                     }
                                     completer.complete(videoURL)
-                                }else{
+                                } else {
                                     // 检查 info 是否包含具体错误信息
                                     val errorMessage = info?.get(PHImageErrorKey) as? NSError
                                     NSLog("VideoPreview Failed to load video asset: ${errorMessage?.localizedDescription}")
@@ -165,6 +168,7 @@ actual suspend fun AssetInfo.toUri(): Uri {
                                 }
                             })
                     }
+
                     else -> {
                         completer.complete(uriStr)
                     }

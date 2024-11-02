@@ -8,6 +8,7 @@ import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
 import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
+import com.dokar.sonner.ToastType
 import com.dokar.sonner.ToasterState
 import com.github.jing332.filepicker.base.FileImpl
 import com.huhx.picker.base.LocalNavigatorController
@@ -37,14 +38,26 @@ internal fun AssetPickerRoute(
                 onPicked = {
                 scope.launch {
                     val list = mutableListOf<FileImpl>()
-                    list.addAll(viewModel.selectedList.mapNotNull {
+                    println("viewModel.selectedList::${viewModel.selectedList.size}")
+                    viewModel.selectedList.mapNotNull {
                         val path = it.toUri().path
+                        println("path::${path}  size::${it.size}  name::${it.filename}  ${it.filepath}")
                         if (path != null && it.size > 0) {
                             FileImpl(path)
                         } else null
-                    })
-                    viewModel.selectedList.clear()
-                    onPicked(list)
+                    }.let{
+                        if(it.size==viewModel.selectedList.size){
+                            list.addAll(it)
+                            viewModel.selectedList.clear()
+                            onPicked(list)
+                        }else{
+                            toasterState?.show("文件下载中，请稍后再试", type = ToastType.Toast)?: kotlin.run {
+                                list.addAll(it)
+                                viewModel.selectedList.clear()
+                                onPicked(list)
+                            }
+                        }
+                    }
                 }
             }, onClose = {
                 scope.launch {

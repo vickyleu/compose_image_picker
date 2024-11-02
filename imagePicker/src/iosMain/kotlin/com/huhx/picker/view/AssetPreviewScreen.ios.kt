@@ -154,7 +154,6 @@ actual fun videoPreview(
                     val identifier = uriString.replace("phasset://", "")
                     val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(identifier), null)
                     val asset = (fetchResult.firstObject() as? PHAsset)
-                    println("videoPreview fetch asset ${asset?.localIdentifier}")
                     if (asset != null) {
                         val fileName = asset.valueForKey("filename") as? String ?: ""
                         val mimeType = "image/jpeg" // 根据需要设置MIME类型
@@ -170,14 +169,13 @@ actual fun videoPreview(
                             directory = "Photo",// iOS上没有直接的文件目录
                         )
                         assetImpl.checkIfVideoNotDownload(context) {
-                            println("videoPreview fetch path ${it.path}")
-                            val playerItem = AVPlayerItem(uRL = NSURL(string = it.path ?: ""))
+                            val playerItem = AVPlayerItem(uRL = NSURL.fileURLWithPath(path=it.path ?: ""))
                             item.value = playerItem
                         }
                     }
                 }else{
                     println("videoPreview fetch uriString ${uriString}")
-                    val playerItem = AVPlayerItem(uRL = NSURL(string = uriString))
+                    val playerItem = AVPlayerItem(uRL = NSURL.fileURLWithPath(path=uriString))
                     item.value = playerItem
                 }
             }

@@ -264,11 +264,15 @@ actual abstract class AssetLoader {
                         val assets = id.toPHAsset()
                         val filePath = assets?.let {
                             val completer = CompletableDeferred<String>()
-                            println("videoPreview fetch mediaType ${it.mediaType == PHAssetMediaTypeVideo} mediaType=${it.mediaType} PHAssetMediaTypeVideo=${PHAssetMediaTypeVideo}")
                             when(it.mediaType){
                                 PHAssetMediaTypeImage -> {
-                                    it.requestContentEditingInputWithOptions(options = PHContentEditingInputRequestOptions.new()) {
+                                    val options = PHContentEditingInputRequestOptions().apply {
+                                        canHandleAdjustmentData = { _ -> true }
+                                        this.setNetworkAccessAllowed(true)
+                                    }
+                                    it.requestContentEditingInputWithOptions(options = options ) {
                                             contentEditingInput, info ->
+
                                         val imageURL = contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
                                         completer.complete(imageURL)
                                     }
@@ -282,7 +286,7 @@ actual abstract class AssetLoader {
                                         it,
                                         options = options,
                                         resultHandler = { avAsset, _, info ->
-                                            println("videoPreview fetch avAsset ${avAsset} mediaType=${it.mediaType} info=${info}")
+
                                             if(avAsset is AVURLAsset){
                                                 val videoURL = avAsset.URL.absoluteString ?: ""
                                                 completer.complete(videoURL)
@@ -322,7 +326,11 @@ actual abstract class AssetLoader {
 
                                 when(it.mediaType){
                                     PHAssetMediaTypeImage -> {
-                                        it.requestContentEditingInputWithOptions(options = PHContentEditingInputRequestOptions.new()) {
+                                        val options = PHContentEditingInputRequestOptions().apply {
+                                            canHandleAdjustmentData = { _ -> true }
+                                            this.setNetworkAccessAllowed(true)
+                                        }
+                                        it.requestContentEditingInputWithOptions(options = options) {
                                             contentEditingInput, info ->
                                             val imageURL = contentEditingInput?.fullSizeImageURL?.absoluteString ?: ""
                                             completer.complete(imageURL)
