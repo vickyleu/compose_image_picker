@@ -251,6 +251,9 @@ actual fun videoPreview(
             override fun onPlaying(pos: Long, dur: Long) {
                 if (isSliding) return
                 position.value = pos
+                if(dur>0L && duration.value!=dur){
+                    duration.value = dur
+                }
             }
         })
         observer.addObserver(player)
