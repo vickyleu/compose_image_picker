@@ -114,9 +114,14 @@ actual class StoragePermissionUtil actual constructor(
 }
 
 actual fun PlatformContext.goToAppSetting() {
+    val scope = CoroutineScope(Dispatchers.Main)
     // iOS 跳转到设置页面
-    val url = NSURL.URLWithString(UIApplicationOpenSettingsURLString)!!
-    if (UIApplication.sharedApplication.canOpenURL(url)) {
-        UIApplication.sharedApplication.openURL(url)
+    val url = NSURL.URLWithString(UIApplicationOpenSettingsURLString)?:return
+    scope.launch {
+        withContext(Dispatchers.Main) {
+            if (UIApplication.sharedApplication.canOpenURL(url)) {
+                UIApplication.sharedApplication.openURL(url)
+            }
+        }
     }
 }
