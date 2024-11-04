@@ -109,11 +109,14 @@ fun AssetImageIndicator(
                             toasterState?.apply { this.show(errorMessage, type = ToastType.Toast) }?:showToast(context, errorMessage)
                             return@clickable
                         }
-                        if(assetInfo.size > maxFileSize){
-                            toasterState?.apply { this.show("文件过大", type = ToastType.Toast) }?:showToast(context, "文件过大")
-                            return@clickable
+                        println("assetInfo.size::${assetInfo.size}  maxFileSize::${maxFileSize}")
+                        assetInfo.checkFileSize(context){
+                            if(assetInfo.size > maxFileSize){
+                                toasterState?.apply { this.show("文件过大", type = ToastType.Toast) }?:showToast(context, "文件过大")
+                                return@checkFileSize
+                            }
+                            if (isSelected) assetSelected.add(assetInfo) else assetSelected.remove(assetInfo)
                         }
-                        if (isSelected) assetSelected.add(assetInfo) else assetSelected.remove(assetInfo)
                     }
                     .clip(CircleShape)
                 ,

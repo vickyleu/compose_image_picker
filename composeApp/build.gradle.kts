@@ -69,7 +69,8 @@ kotlin {
             implementation(libs.voyager.navigator.bottomsheet)
             implementation(libs.voyager.navigator.tab)
             implementation(libs.voyager.transitions)
-
+            implementation("dev.chrisbanes.haze:haze:0.9.0-rc03")
+            implementation("dev.chrisbanes.haze:haze-materials:0.9.0-rc03")
         }
     }
 }

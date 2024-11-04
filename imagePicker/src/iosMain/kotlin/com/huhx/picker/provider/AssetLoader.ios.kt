@@ -12,8 +12,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import platform.AVFoundation.AVURLAsset
 import platform.Foundation.NSError
 import platform.Foundation.NSLog
@@ -311,6 +313,34 @@ actual abstract class AssetLoader {
             }
         }
 
+
+        override fun checkFileSize(context: PlatformContext, callback: () -> Unit) {
+            if (_size == 0L) {
+                queryJob2?.cancel()
+                queryJob2=innerScope.launch {
+                    withContext(Dispatchers.IO){
+                        try{
+                            withTimeout(5000){
+                                val assets = id.toPHAsset()
+                                val fileSize = assets?.let {
+                                    val resource = PHAssetResource.assetResourcesForAsset(it)
+                                        .firstOrNull() as? PHAssetResource
+                                    val fileSize = (resource?.valueForKey("fileSize") as? Long) ?: 0L
+                                    fileSize
+                                } ?: 0L
+                                _size = fileSize
+                                callback()
+                            }
+                        }catch (e: TimeoutCancellationException){
+                            callback()
+                        }
+                    }
+                }
+            }
+            else{
+                callback()
+            }
+        }
 
         private var queryJob2:Job? = null
         private var queryJob:Job? = null

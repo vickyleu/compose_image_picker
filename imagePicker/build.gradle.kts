@@ -85,6 +85,8 @@ kotlin {
             implementation(libs.voyager.navigator.tab)
             implementation(libs.voyager.transitions)
 
+            compileOnly("dev.chrisbanes.haze:haze:0.9.0-rc03")
+            compileOnly("dev.chrisbanes.haze:haze-materials:0.9.0-rc03")
         }
         androidMain.dependencies {
             implementation(libs.androidx.media3.exoplayer)

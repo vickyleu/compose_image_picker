@@ -45,6 +45,9 @@ open class AssetInfo(
 
     open fun checkIfVideoNotDownload(context: PlatformContext,callback: (Uri) -> Unit = {}) {
     }
+    open fun checkFileSize(context: PlatformContext,callback: () -> Unit = {}) {
+        callback()
+    }
 
 
     fun isGif(): Boolean {
