@@ -31,5 +31,6 @@ internal class AssetPreviewViewModel(
 
     override fun prepare() {
         super.prepare()
+        println("navigator作用域:prepare")
     }
 }

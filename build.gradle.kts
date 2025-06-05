@@ -39,6 +39,13 @@ plugins {
     alias(libs.plugins.compose.compiler).apply(false)
     alias(libs.plugins.dokka)
     id("maven-publish")
+
+//    id(libs.plugins.android.application.get().pluginId).apply(false)
+//    id(libs.plugins.android.library.get().pluginId).apply(false)
+//    id(libs.plugins.kotlin.multiplatform.get().pluginId).apply(false)
+//    id(libs.plugins.kotlin.parcelize.get().pluginId).apply(false)
+//    id(libs.plugins.jetbrains.compose.get().pluginId).apply(false)
+//    id(libs.plugins.compose.compiler.get().pluginId).apply(false)
 }
 
 allprojects {

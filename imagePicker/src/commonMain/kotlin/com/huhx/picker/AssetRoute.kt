@@ -2,10 +2,13 @@ package com.huhx.picker
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
-import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
 import com.dokar.sonner.ToastType
@@ -24,18 +27,17 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun AssetPickerRoute(
     viewModel: AssetViewModel,
-    toasterState: ToasterState?=null,
+    toasterState: ToasterState? = null,
     onPicked: (List<FileImpl>) -> Unit,
     onClose: (List<FileImpl>) -> Unit,
     assetPickerConfig: AssetPickerConfig
 ) {
     val scope = rememberCoroutineScope()
-
-    CompositionLocalProvider(LocalAssetViewModelProvider provides viewModel) {
-        val startScreen = remember {
-            AssetDisplayScreen(viewModel = viewModel,
-                toasterState = toasterState,
-                onPicked = {
+    val startScreen = remember {
+        AssetDisplayScreen(
+            viewModel = viewModel,
+            toasterState = toasterState,
+            onPicked = {
                 scope.launch {
                     val list = mutableListOf<FileImpl>()
                     println("viewModel.selectedList::${viewModel.selectedList.size}")
@@ -45,17 +47,18 @@ internal fun AssetPickerRoute(
                         if (path != null && it.size > 0) {
                             FileImpl(path)
                         } else null
-                    }.let{
-                        if(it.size==viewModel.selectedList.size){
+                    }.let {
+                        if (it.size == viewModel.selectedList.size) {
                             list.addAll(it)
                             viewModel.selectedList.clear()
                             onPicked(list)
-                        }else{
-                            toasterState?.show("文件下载中，请稍后再试", type = ToastType.Toast)?: kotlin.run {
-                                list.addAll(it)
-                                viewModel.selectedList.clear()
-                                onPicked(list)
-                            }
+                        } else {
+                            toasterState?.show("文件下载中，请稍后再试", type = ToastType.Toast)
+                                ?: kotlin.run {
+                                    list.addAll(it)
+                                    viewModel.selectedList.clear()
+                                    onPicked(list)
+                                }
                         }
                     }
                 }
@@ -71,20 +74,28 @@ internal fun AssetPickerRoute(
                     viewModel.selectedList.clear()
                     onClose(list)
                 }
-            }, assetPickerConfig = assetPickerConfig)
+            }, assetPickerConfig = assetPickerConfig
+        )
+    }
+    Navigator(
+        screen = startScreen,
+        disposeBehavior = NavigatorDisposeBehavior(
+            disposeNestedNavigators = false,
+            disposeSteps = false
+        ),
+        onBackPressed = { currentScreen ->
+            false
         }
-        Navigator(
-            screen = startScreen,
-            disposeBehavior = NavigatorDisposeBehavior(
-                disposeNestedNavigators = false,
-                disposeSteps = false
-            ),
-            onBackPressed = { currentScreen ->
-                false
-            }
-        ) {
-            CompositionLocalProvider(LocalNavigatorController provides it) {
-                CurrentScreen()
+    ) {
+        var refreshTrigger by remember { mutableStateOf(0) }
+        // 这个LaunchedEffect会在refreshTrigger变化时重新执行
+        LaunchedEffect(it.size) {
+            // 强制触发重组
+            refreshTrigger++
+        }
+        CompositionLocalProvider(LocalNavigatorController provides it) {
+            CompositionLocalProvider(LocalAssetViewModelProvider provides viewModel) {
+                it.lastItem.Content()
             }
         }
     }

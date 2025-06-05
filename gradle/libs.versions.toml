@@ -1,26 +1,26 @@
 [versions]
-agp = "8.7.2"
+agp = "8.10.1"
 
 android-minSdk = "24"
 android-compileSdk = "34"
 android-targetSdk = "33"
 
-constraintlayout = "2.2.0"
+constraintlayout = "2.2.1"
 #noinspection GradleDependency
-kotlin = "2.0.20"
+kotlin = "2.1.21"
 #noinspection GradleDependency
-compose-plugin = "1.7.0"
-jetpack-compose-bom = "2024.11.00"
-coroutines-bom = "1.9.0"
+compose-plugin = "1.7.3"
+jetpack-compose-bom = "2025.05.01"
+coroutines-bom = "1.10.2"
 coil-bom = "3.0.0"
 jvmTarget = "17"
 androidx-lifecycle = "2.8.4"
 dokka = "1.9.20"
-media3Exoplayer = "1.4.1"
-media3Ui = "1.4.1"
-navigationCompose = "2.8.0-alpha02"
+media3Exoplayer = "1.7.1"
+media3Ui = "1.7.1"
+navigationCompose = "2.8.0-alpha10"
 accompanist = "0.34.0"
-kotlinxDatetime = "0.6.1"
+kotlinxDatetime = "0.6.2"
 compose-voyager = "1.1.0-beta03"
 
 [libraries]

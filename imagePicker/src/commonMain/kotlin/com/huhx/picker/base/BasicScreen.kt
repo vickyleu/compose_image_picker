@@ -236,11 +236,15 @@ private val BasicScreen<*>.navigator: Navigator
 @OptIn(InternalVoyagerApi::class)
 val LocalNavigatorController = compositionLocalOf(structuralEqualityPolicy<Navigator>()) {
     Navigator(
-        screens = listOf(), key = "fakeKey", stateHolder = object : SaveableStateHolder {
+        screens = listOf(), key = "fakeKey",
+        stateHolder = object : SaveableStateHolder{
             @Composable
-            override fun SaveableStateProvider(key: Any, content: @Composable () -> Unit) {
-            }
+            override fun SaveableStateProvider(
+                key: Any,
+                content: @Composable (() -> Unit)
+            ) {
 
+            }
             override fun removeState(key: Any) {
             }
         },

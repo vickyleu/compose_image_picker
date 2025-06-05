@@ -87,7 +87,6 @@ import compose_image_picker.imagepicker.generated.resources.icon_camera
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -438,6 +437,7 @@ private fun AssetContent(
                         toasterState = toasterState,
                         assetInfo = assetInfo,
                         navigateToPreview = {
+                            println("navigator作用域:navigateToPreview:${navigator}")
                             navigator.push(
                                 AssetPreviewScreen(
                                     viewModel = viewModel,

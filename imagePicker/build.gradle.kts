@@ -8,6 +8,11 @@ plugins {
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.compose.compiler)
+//    id(libs.plugins.kotlin.multiplatform.get().pluginId)
+//    id(libs.plugins.android.library.get().pluginId)
+//    id(libs.plugins.kotlin.parcelize.get().pluginId)
+//    id(libs.plugins.jetbrains.compose.get().pluginId)
+//    id(libs.plugins.compose.compiler.get().pluginId)
 }
 
 kotlin {
@@ -94,6 +99,13 @@ kotlin {
             implementation(libs.accompanist.permissions)
             implementation(libs.coil.video)
             implementation(libs.coil.gif)
+
+//            implementation("androidx.media3:media3-exoplayer:1.7.1")
+//            implementation("androidx.media3:media3-ui:1.7.1")
+//            implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+//            implementation("io.coil-kt.coil3:coil-video")
+//            implementation("io.coil-kt.coil3:coil-gif")
+
         }
     }
 
