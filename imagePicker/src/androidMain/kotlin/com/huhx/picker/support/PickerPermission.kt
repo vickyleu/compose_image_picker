@@ -33,6 +33,7 @@ import com.huhx.picker.util.LocalStoragePermission
 import com.huhx.picker.util.goToAppSetting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 
@@ -48,8 +49,9 @@ fun PickerPermissions(content: @Composable () -> Unit) {
 
     val lifecycle = LocalLifecycleOwner.current
     val storagePermissionUtil = LocalStoragePermission.current?:throw IllegalStateException("LocalStoragePermission not found")
-    LaunchedEffect(Unit) {
+    LaunchedEffect(permissionsGranted) {
         withContext(Dispatchers.IO) {
+            println("PickerPermissions::LifecycleEventObserver::11111")
             permissionsGranted = storagePermissionUtil.checkStoragePermission()
         }
     }
@@ -62,10 +64,12 @@ fun PickerPermissions(content: @Composable () -> Unit) {
                 return@LifecycleEventObserver
             }
             lastEvent = event
+            println("PickerPermissions::LifecycleEventObserver::${event.name}")
             if (event == Lifecycle.Event.ON_RESUME) {
-                scope.launch {
+                runBlocking {
                     withContext(Dispatchers.IO) {
                         permissionsGranted = storagePermissionUtil.checkStoragePermission()
+                        println("PickerPermissions::LifecycleEventObserver::permissionsGranted::${permissionsGranted}")
                     }
                 }
             }

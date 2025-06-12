@@ -62,15 +62,15 @@ kotlin {
             implementation(libs.compose.navigation)
 
             implementation(projects.imagePicker)
-//            implementation("com.vickyleu.image_picker:imagepicker:1.0.2")
+//            implementation("com.vickyleu.image_picker:imagepicker:1.0.3")
 
             implementation(libs.voyager.navigator)
             implementation(libs.voyager.screenmodel)
             implementation(libs.voyager.navigator.bottomsheet)
             implementation(libs.voyager.navigator.tab)
             implementation(libs.voyager.transitions)
-            implementation("dev.chrisbanes.haze:haze:0.9.0-rc03")
-            implementation("dev.chrisbanes.haze:haze-materials:0.9.0-rc03")
+            implementation(libs.haze)
+            implementation(libs.haze.materials)
         }
     }
 }
