@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.Dp
-import cafe.adriel.voyager.navigator.Navigator
 import coil3.Uri
 import coil3.compose.LocalPlatformContext
 import com.dokar.sonner.ToastType
@@ -38,95 +37,93 @@ import kotlinx.coroutines.withContext
 class CameraLaunchViewModel(val toasterState:ToasterState?) : BasicViewModel() {
 }
 
-class CameraLaunchScreen(toasterState: ToasterState? = null) :
-    BasicScreen<CameraLaunchViewModel>(create = { CameraLaunchViewModel(toasterState) }) {
-    @Composable
-    override fun modelContent(
-        model: CameraLaunchViewModel,
-        navigator: Navigator,
-        tabbarHeight: Dp
+@Composable
+fun CameraLaunchScreen(
+    modifier: Modifier = Modifier,
+    toasterState: ToasterState? = null,
+    onImageCaptured: ((String?) -> Unit)? = null,
+    onClose: (() -> Unit)? = null
+) {
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize().background(color = Color.Red),
     ) {
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxSize().background(color = Color.Red),
-        ) {
-            val lifecycle = LocalLifecycleOwner.current
+        val lifecycle = LocalLifecycleOwner.current
 
-            val scope = rememberCoroutineScope()
-            val cameraLauncher = rememberCameraLauncher(scope, onCreate = {
-                println("cameraLauncher onCreate")
-            }) { info ->
-                if (info != null) {
-                    scope.launch {
-                        info.toUri().path?.let {
-                            val buffer = ByteArray(info.size.toInt())
-                            FileImpl(it).inputStream().useImpl {
-                                it.read(buffer)
-                            }
-                            navigator.pop()
-                            println("bytesRead:  ${it} size=>${info.size.toInt()}")
-                        } ?: run {
-                            navigator.pop()
+        val scope = rememberCoroutineScope()
+        val cameraLauncher = rememberCameraLauncher(scope, onCreate = {
+            println("cameraLauncher onCreate")
+        }) { info ->
+            if (info != null) {
+                scope.launch {
+                    info.toUri().path?.let {
+                        val buffer = ByteArray(info.size.toInt())
+                        FileImpl(it).inputStream().useImpl {
+                            it.read(buffer)
                         }
+                        onImageCaptured?.invoke(it)
+                        onClose?.invoke()
+                        println("bytesRead:  ${it} size=>${info.size.toInt()}")
+                    } ?: run {
+                        onClose?.invoke()
                     }
-                } else {
-                    scope.launch {
-                        navigator.pop()
-                    }
+                }
+            } else {
+                scope.launch {
+                    onClose?.invoke()
                 }
             }
-            permissionHandle {
-                val state = lifecycle.lifecycle.currentStateFlow.collectAsState()
-                val impl = LocalStoragePermission.current!!
-                var cameraIsLaunch by remember { mutableStateOf(false) }
-                var cameraPermission by remember { mutableStateOf(false) }
-                var cameraPermissionRequested by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) {
-                    cameraPermission = impl.checkCameraPermission()
+        }
+        permissionHandle {
+            val state = lifecycle.lifecycle.currentStateFlow.collectAsState()
+            val impl = LocalStoragePermission.current!!
+            var cameraIsLaunch by remember { mutableStateOf(false) }
+            var cameraPermission by remember { mutableStateOf(false) }
+            var cameraPermissionRequested by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                cameraPermission = impl.checkCameraPermission()
+            }
+            val context = LocalPlatformContext.current
+            scope.launch {
+                suspend fun getUri(): Uri? {
+                    return AssetLoader.insertImage(context)
                 }
-                val context = LocalPlatformContext.current
-                scope.launch {
-                    suspend fun getUri(): Uri? {
-                        return AssetLoader.insertImage(context)
-                    }
-                    cameraPermission = impl.checkCameraPermission()
-                    if (cameraPermission.not()) {
-                        withContext(Dispatchers.IO) {
-                            if (cameraPermissionRequested) {
-                                context.goToAppSetting()
-                                return@withContext
-                            }
+                cameraPermission = impl.checkCameraPermission()
+                if (cameraPermission.not()) {
+                    withContext(Dispatchers.IO) {
+                        if (cameraPermissionRequested) {
+                            context.goToAppSetting()
+                            return@withContext
+                        }
 
-                            impl.requestCameraPermission(
-                                onGranted = {
-                                    cameraPermissionRequested = true
-                                    cameraPermission = true
-                                    scope.launch {
-                                        cameraLauncher.launch(context, getUri())
-                                    }
-                                },
-                                onDenied = {
-                                    cameraPermissionRequested = true
-                                    model.toasterState?.apply {
-                                        this.show(
-                                            "请授予相机权限",
-                                            type = ToastType.Toast
-                                        )
-                                    } ?: showToast(context, "请授予相机权限")
-                                    context.goToAppSetting()
+                        impl.requestCameraPermission(
+                            onGranted = {
+                                cameraPermissionRequested = true
+                                cameraPermission = true
+                                scope.launch {
+                                    cameraLauncher.launch(context, getUri())
                                 }
-                            )
-                        }
-                        return@launch
-                    } else {
-                        if (cameraIsLaunch) {
-                            return@launch
-                        }
-                        cameraIsLaunch = true
-                        cameraLauncher.launch(context, getUri())
+                            },
+                            onDenied = {
+                                cameraPermissionRequested = true
+                                toasterState?.apply {
+                                    this.show(
+                                        "请授予相机权限",
+                                        type = ToastType.Toast
+                                    )
+                                } ?: showToast(context, "请授予相机权限")
+                                context.goToAppSetting()
+                            }
+                        )
                     }
+                    return@launch
+                } else {
+                    if (cameraIsLaunch) {
+                        return@launch
+                    }
+                    cameraIsLaunch = true
+                    cameraLauncher.launch(context, getUri())
                 }
             }
         }
     }
-
 }

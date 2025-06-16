@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package com.huhx.picker.view
 
 //import compose_image_picker.imagepicker.generated.resources.message_selected_exceed
@@ -45,7 +47,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
@@ -59,9 +63,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
-import cafe.adriel.voyager.navigator.Navigator
-import cafe.adriel.voyager.navigator.internal.BackHandler
+
 import coil3.PlatformContext
 import coil3.Uri
 import coil3.compose.LocalPlatformContext
@@ -110,22 +112,11 @@ internal class AssetDisplayScreen(
     )
 }) {
 
-    override suspend fun onBackPressed(
-        model: AssetDisplayViewModel,
-        navigator: Navigator
-    ): Boolean {
-        if (model.viewModel.selectedList.isNotEmpty()) {
-            model.viewModel.clear()
-        } else {
-            model.onClose(model.viewModel.selectedList)
-        }
-        return super.onBackPressed(model, navigator)
-    }
-
     @Composable
     override fun modelContent(
         model: AssetDisplayViewModel,
-        navigator: Navigator,
+        onNavigateUp: (() -> Unit)?,
+        onNavigate: ((String) -> Unit)?,
         tabbarHeight: Dp
     ) {
         val viewModel = LocalAssetViewModelProvider.current
@@ -142,50 +133,41 @@ internal class AssetDisplayScreen(
                 viewModel,
                 toasterState = model.toasterState,
                 model.assetPickerConfig.requestType,
-                initialBottomBarHeight, navigator
+                initialBottomBarHeight,
+                onNavigateToPreview = { index, time, requestType ->
+                    onNavigate?.invoke("preview/${index}/${time}/${requestType}")
+                }
             )
         }
     }
 
-    @OptIn(InternalVoyagerApi::class)
     @Composable
     override fun modelTopBar(
         model: AssetDisplayViewModel,
-        navigator: Navigator,
+        onNavigateUp: (() -> Unit)?,
+        onNavigate: ((String) -> Unit)?,
         topAppBarHeightAssign: MutableState<Dp>
     ) {
         val viewModel = LocalAssetViewModelProvider.current
-        BackHandler(enabled = true) {
-            if (viewModel.selectedList.isNotEmpty()) {
-                viewModel.clear()
-            } else {
-                model.onClose(viewModel.selectedList)
-            }
-        }
-        val scope = rememberCoroutineScope()
-        if (navigator.canPop) {
-            scope.launch {
-                val agree = onBackPressed(model, navigator)
-                if (agree) {
-                    navigator.pop()
-                }
-            }
-        }
         val initialTopBarHeight = remember { viewModel.initialTopBarHeight }
         with(LocalDensity.current) {
             DisplayTopAppBar(
                 selectedList = viewModel.selectedList,
-                navigateUp = model.onClose, onPicked = model.onPicked,
+                navigateUp = {
+                    model.onClose(it)
+                    onNavigateUp?.invoke()
+                }, 
+                onPicked = model.onPicked,
                 initialTopBarHeight = initialTopBarHeight,
             )
         }
-
     }
 
     @Composable
     override fun modelBottomBar(
         model: AssetDisplayViewModel,
-        navigator: Navigator,
+        onNavigateUp: (() -> Unit)?,
+        onNavigate: ((String) -> Unit)?,
         bottomBarHeightAssign: MutableState<Dp>
     ) {
         val viewModel = LocalAssetViewModelProvider.current
@@ -194,17 +176,12 @@ internal class AssetDisplayScreen(
             DisplayBottomBar(
                 viewModel,
                 initialBottomBarHeight = initialBottomBarHeight,
-                navigateToDropDown = {
-                    navigator.push(AssetSelectorScreen(it, viewModel.directoryGroup) { name ->
-                        navigator.pop()
-                        viewModel.directory = formatDirectoryName(name) to name
-                    })
+                navigateToDropDown = { directory ->
+                    onNavigate?.invoke("selector/${directory}")
                 }
             )
         }
-
     }
-
 }
 
 
@@ -322,7 +299,7 @@ private fun AssetContent(
     toasterState: ToasterState? = null,
     requestType: RequestType,
     padding: MutableState<Dp>,
-    navigator: Navigator
+    onNavigateToPreview: (Int, String, RequestType) -> Unit
 ) {
     var assets by remember { mutableStateOf(viewModel.getGroupedAssets(requestType)) }
     val context = LocalPlatformContext.current
@@ -437,14 +414,7 @@ private fun AssetContent(
                         toasterState = toasterState,
                         assetInfo = assetInfo,
                         navigateToPreview = {
-                            println("navigator作用域:navigateToPreview:${navigator}")
-                            navigator.push(
-                                AssetPreviewScreen(
-                                    viewModel = viewModel,
-                                    toasterState = toasterState,
-                                    index = (index - 1), time = time, requestType = requestType
-                                )
-                            )
+                            onNavigateToPreview(index - 1, time, requestType)
                         },
                         selectedList = viewModel.selectedList,
                         onCameraClicks = {

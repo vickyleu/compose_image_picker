@@ -7,22 +7,21 @@ android-targetSdk = "33"
 
 constraintlayout = "2.2.1"
 #noinspection GradleDependency
-hazeMaterials = "0.9.0-rc03"
+hazeMaterials = "1.6.4"
 kotlin = "2.1.21"
 #noinspection GradleDependency
 compose-plugin = "1.8.1"
 jetpack-compose-bom = "2025.06.00"
 coroutines-bom = "1.10.2"
-coil-bom = "3.0.0"
+coil-bom = "3.2.0"
 jvmTarget = "17"
-androidx-lifecycle = "2.8.4"
-dokka = "1.9.20"
+androidx-lifecycle = "2.9.0"
+dokka = "2.0.0"
 media3Exoplayer = "1.7.1"
 media3Ui = "1.7.1"
-navigationCompose = "2.8.0-alpha10"
+androidx-navigation = "2.9.0-beta02"
 accompanist = "0.34.0"
 kotlinxDatetime = "0.6.2"
-compose-voyager = "1.1.0-beta03"
 
 [libraries]
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
@@ -35,7 +34,8 @@ haze = { module = "dev.chrisbanes.haze:haze", version.ref = "hazeMaterials" }
 haze-materials = { module = "dev.chrisbanes.haze:haze-materials", version.ref = "hazeMaterials" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 
-compose-navigation = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+compose-navigation = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "androidx-navigation" }
+compose-backhandler = { module = "org.jetbrains.compose.ui:ui-backhandler"}
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "jetpack-compose-bom" }
 coroutines-bom = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-bom", version.ref = "coroutines-bom" }
 coil-bom = { module = "io.coil-kt.coil3:coil-bom", version.ref = "coil-bom" }
@@ -43,13 +43,6 @@ coil-core = { module = "io.coil-kt.coil3:coil" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose" }
 coil-video = { module = "io.coil-kt.coil3:coil-video" }
 coil-gif = { module = "io.coil-kt.coil3:coil-gif" }
-
-voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "compose-voyager" }
-voyager-screenmodel = { module = "cafe.adriel.voyager:voyager-screenmodel", version.ref = "compose-voyager" }
-voyager-navigator-tab = { module = "cafe.adriel.voyager:voyager-tab-navigator", version.ref = "compose-voyager" }
-voyager-transitions = { module = "cafe.adriel.voyager:voyager-transitions", version.ref = "compose-voyager" }
-voyager-navigator-bottomsheet = { module = "cafe.adriel.voyager:voyager-bottom-sheet-navigator", version.ref = "compose-voyager" }
-
 
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
 

@@ -72,7 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import cafe.adriel.voyager.navigator.Navigator
+
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
@@ -132,14 +132,13 @@ internal class AssetPreviewScreen(
     @Composable
     override fun modelContent(
         model: AssetPreviewViewModel,
-        navigator: Navigator,
+        onNavigateUp: (() -> Unit)?,
+        onNavigate: ((String) -> Unit)?,
         tabbarHeight: Dp
     ) {
         var index by remember { mutableIntStateOf(model.index) }
         val assets = remember(model.index) { model.assets }
         val pageState = rememberPagerState(pageCount = assets::size)
-
-
 
         LaunchedEffect(assets.size) {
             pageState.scrollToPage(index.coerceIn(0, assets.size - 1))
@@ -236,14 +235,13 @@ internal class AssetPreviewScreen(
                 }
             }
         }
-
-
     }
 
     @Composable
     override fun modelTopBar(
         model: AssetPreviewViewModel,
-        navigator: Navigator,
+        onNavigateUp: (() -> Unit)?,
+        onNavigate: ((String) -> Unit)?,
         topAppBarHeightAssign: MutableState<Dp>
     ) {
         var leftWidth by remember { mutableStateOf(0.dp) }
@@ -269,7 +267,7 @@ internal class AssetPreviewScreen(
                             modifier = Modifier.size(48.dp)
                                 .padding(8.dp)
                                 .clickable {
-                                    navigator.pop()
+                                    onNavigateUp?.invoke()
                                 }.padding(horizontal = 3.dp, vertical = 3.dp)
                         ) {
                             Image(
@@ -340,7 +338,8 @@ internal class AssetPreviewScreen(
     @Composable
     override fun modelBottomBar(
         model: AssetPreviewViewModel,
-        navigator: Navigator,
+        onNavigateUp: (() -> Unit)?,
+        onNavigate: ((String) -> Unit)?,
         bottomBarHeightAssign: MutableState<Dp>
     ) {
         val viewModel = LocalAssetViewModelProvider.current
@@ -352,14 +351,13 @@ internal class AssetPreviewScreen(
                 },
                 toasterState = model.toasterState,
                 selectedList = viewModel.selectedList,
-                maxFileSize=maxFileSize,
+                maxFileSize = maxFileSize,
                 assetInfo = model.assetInfo.value
             ) {
-                navigator.pop()
+                onNavigateUp?.invoke()
                 if (viewModel.selectedList.isEmpty()) viewModel.selectedList.add(it)
             }
         }
-
     }
 }
 

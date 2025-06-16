@@ -84,14 +84,11 @@ kotlin {
             implementation(libs.coil.core)
             api(libs.coil.compose)
 
-            implementation(libs.voyager.navigator)
-            implementation(libs.voyager.screenmodel)
-            implementation(libs.voyager.navigator.bottomsheet)
-            implementation(libs.voyager.navigator.tab)
-            implementation(libs.voyager.transitions)
+            implementation(libs.compose.navigation)
+            implementation(libs.compose.backhandler)
 
-            compileOnly("dev.chrisbanes.haze:haze:0.9.0-rc03")
-            compileOnly("dev.chrisbanes.haze:haze-materials:0.9.0-rc03")
+            compileOnly("dev.chrisbanes.haze:haze:1.6.4")
+            compileOnly("dev.chrisbanes.haze:haze-materials:1.6.4")
         }
         androidMain.dependencies {
             implementation(libs.androidx.media3.exoplayer)

@@ -1,29 +1,29 @@
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package com.huhx.picker
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
-import cafe.adriel.voyager.navigator.Navigator
-import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.backhandler.BackHandler
 import com.dokar.sonner.ToastType
 import com.dokar.sonner.ToasterState
 import com.github.jing332.filepicker.base.FileImpl
-import com.huhx.picker.base.LocalNavigatorController
 import com.huhx.picker.model.AssetPickerConfig
 import com.huhx.picker.model.RequestType
 import com.huhx.picker.model.toUri
 import com.huhx.picker.view.AssetDisplayScreen
+import com.huhx.picker.view.AssetPreviewScreen
+import com.huhx.picker.view.AssetSelectorScreen
 import com.huhx.picker.viewmodel.AssetViewModel
 import com.huhx.picker.viewmodel.LocalAssetViewModelProvider
 import kotlinx.coroutines.launch
 
-@OptIn(InternalVoyagerApi::class)
 @Composable
 internal fun AssetPickerRoute(
     viewModel: AssetViewModel,
@@ -33,7 +33,42 @@ internal fun AssetPickerRoute(
     assetPickerConfig: AssetPickerConfig
 ) {
     val scope = rememberCoroutineScope()
-    val startScreen = remember {
+    
+    // 导航状态管理
+    var currentScreen by remember { mutableStateOf("display") }
+    var previewIndex by remember { mutableStateOf(0) }
+    var previewTime by remember { mutableStateOf("") }
+    var previewRequestType by remember { mutableStateOf(RequestType.COMMON) }
+    var selectorDirectory by remember { mutableStateOf("") }
+    
+    // 统一的返回处理逻辑
+    BackHandler(enabled = true) {
+        when (currentScreen) {
+            "display" -> {
+                scope.launch {
+                    val list = mutableListOf<FileImpl>()
+                    list.addAll(viewModel.selectedList.mapNotNull {
+                        val path = it.toUri().path
+                        if (path != null && it.size > 0) {
+                            FileImpl(path)
+                        } else null
+                    })
+                    viewModel.selectedList.clear()
+                    onClose(list)
+                }
+            }
+            "preview" -> {
+                // 从预览返回到主界面
+                currentScreen = "display"
+            }
+            "selector" -> {
+                // 从选择器返回到主界面
+                currentScreen = "display"
+            }
+        }
+    }
+    
+    val displayScreen = remember {
         AssetDisplayScreen(
             viewModel = viewModel,
             toasterState = toasterState,
@@ -77,25 +112,65 @@ internal fun AssetPickerRoute(
             }, assetPickerConfig = assetPickerConfig
         )
     }
-    Navigator(
-        screen = startScreen,
-        disposeBehavior = NavigatorDisposeBehavior(
-            disposeNestedNavigators = false,
-            disposeSteps = false
-        ),
-        onBackPressed = { currentScreen ->
-            false
-        }
-    ) {
-        var refreshTrigger by remember { mutableStateOf(0) }
-        // 这个LaunchedEffect会在refreshTrigger变化时重新执行
-        LaunchedEffect(it.size) {
-            // 强制触发重组
-            refreshTrigger++
-        }
-        CompositionLocalProvider(LocalNavigatorController provides it) {
-            CompositionLocalProvider(LocalAssetViewModelProvider provides viewModel) {
-                it.lastItem.Content()
+    
+    CompositionLocalProvider(LocalAssetViewModelProvider provides viewModel) {
+        when (currentScreen) {
+            "display" -> {
+                displayScreen.Content(
+                    onNavigateUp = { onClose(emptyList()) },
+                    onNavigate = { route ->
+                        when {
+                            route.startsWith("preview/") -> {
+                                val parts = route.substringAfter("preview/").split("/")
+                                if (parts.size >= 3) {
+                                    previewIndex = parts[0].toIntOrNull() ?: 0
+                                    previewTime = parts[1]
+                                    previewRequestType = try {
+                                        RequestType.valueOf(parts[2])
+                                    } catch (e: Exception) {
+                                        RequestType.COMMON
+                                    }
+                                    currentScreen = "preview"
+                                }
+                            }
+                            route.startsWith("selector/") -> {
+                                selectorDirectory = route.substringAfter("selector/")
+                                currentScreen = "selector"
+                            }
+                        }
+                    }
+                )
+            }
+            "preview" -> {
+                val previewScreen = remember(previewIndex, previewTime, previewRequestType) {
+                    AssetPreviewScreen(
+                        viewModel = viewModel,
+                        toasterState = toasterState,
+                        index = previewIndex,
+                        time = previewTime,
+                        requestType = previewRequestType
+                    )
+                }
+                previewScreen.Content(
+                    onNavigateUp = { currentScreen = "display" },
+                    onNavigate = { /* Handle nested navigation if needed */ }
+                )
+            }
+            "selector" -> {
+                val selectorScreen = remember(selectorDirectory) {
+                    AssetSelectorScreen(
+                        directory = selectorDirectory,
+                        assetDirectories = viewModel.directoryGroup,
+                        onSelected = { name ->
+                            viewModel.directory = formatDirectoryName(name) to name
+                            currentScreen = "display"
+                        }
+                    )
+                }
+                selectorScreen.Content(
+                    onNavigateUp = { currentScreen = "display" },
+                    onNavigate = { /* Handle nested navigation if needed */ }
+                )
             }
         }
     }

@@ -2,13 +2,10 @@ package com.huhx.picker.base
 
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.text.TextStyle
-import cafe.adriel.voyager.core.model.ScreenModel
 import kotlin.jvm.Transient
 
 
-internal abstract class BasicViewModel : ScreenModel {
+internal abstract class BasicViewModel {
     private val isFirstLoading = mutableStateOf(true)
 
 
@@ -41,9 +38,8 @@ internal abstract class BasicViewModel : ScreenModel {
 
     }
 
-    final override fun onDispose() {
+    open fun onDispose() {
         recycle()
-//        println("navigator model this::${this::class.simpleName}")
     }
 
 }

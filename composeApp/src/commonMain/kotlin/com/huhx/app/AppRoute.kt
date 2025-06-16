@@ -20,7 +20,7 @@ fun ImagePicker(
             assetPickerConfig = AssetPickerConfig(
                 gridCount = 3,
                 requestType = com.huhx.picker.model.RequestType.COMMON,
-                maxFileSize = 1 * 1024 * 1024
+                maxFileSize = 10 * 1024 * 1024
             ),
             toasterState=toasterState,
             onPicked = onPicked,

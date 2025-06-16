@@ -64,11 +64,8 @@ kotlin {
             implementation(projects.imagePicker)
 //            implementation("com.vickyleu.image_picker:imagepicker:1.0.3")
 
-            implementation(libs.voyager.navigator)
-            implementation(libs.voyager.screenmodel)
-            implementation(libs.voyager.navigator.bottomsheet)
-            implementation(libs.voyager.navigator.tab)
-            implementation(libs.voyager.transitions)
+            implementation(libs.compose.navigation)
+            implementation(libs.compose.backhandler)
             implementation(libs.haze)
             implementation(libs.haze.materials)
         }

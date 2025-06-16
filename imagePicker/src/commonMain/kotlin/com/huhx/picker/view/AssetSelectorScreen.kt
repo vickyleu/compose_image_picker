@@ -39,9 +39,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.annotation.InternalVoyagerApi
-import cafe.adriel.voyager.navigator.Navigator
-import cafe.adriel.voyager.navigator.internal.BackHandler
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
@@ -67,20 +64,23 @@ internal class AssetSelectorScreen(
     @Composable
     override fun modelContent(
         model: AssetSelectorViewModel,
-        navigator: Navigator,
+        onNavigateUp: (() -> Unit)?,
+        onNavigate: ((String) -> Unit)?,
         tabbarHeight: Dp
     ) {
         LazyColumn(modifier = Modifier) {
             items(items = model.assetDirectories) {
                 val itemDirectory = it.directory
                 ListItem(
-                    modifier = Modifier.clickable { model.onSelected(itemDirectory.second) },
+                    modifier = Modifier.clickable { 
+                        model.onSelected(itemDirectory.second)
+                        onNavigateUp?.invoke()
+                    },
                     leadingContent = {
                         AsyncImage(
                             model = ImageRequest.Builder(LocalPlatformContext.current)
                                 .data(it.cover ?: Icons.Default.Place)
                                 .decoderFactoryPlatform {}
-//                                .decoderFactory(VideoFrameDecoder.Factory()) //TODO add VideoFrameDecoder.Factory()
                                 .build(),
                             modifier = Modifier
                                 .size(32.dp)
@@ -113,16 +113,13 @@ internal class AssetSelectorScreen(
         }
     }
 
-    @OptIn(InternalVoyagerApi::class)
     @Composable
     override fun modelTopBar(
         model: AssetSelectorViewModel,
-        navigator: Navigator,
+        onNavigateUp: (() -> Unit)?,
+        onNavigate: ((String) -> Unit)?,
         topAppBarHeightAssign: MutableState<Dp>
     ) {
-        BackHandler(enabled = true) {
-            navigator.pop()
-        }
         with(LocalDensity.current) {
             var leftWidth by remember { mutableStateOf(0.dp) }
             Box(modifier = Modifier.fillMaxWidth().height(48.dp).background(Color.Black)) {
@@ -138,7 +135,7 @@ internal class AssetSelectorScreen(
                             }
                             .padding(8.dp)
                             .clickable {
-                                navigator.pop()
+                                onNavigateUp?.invoke()
                             }.padding(horizontal = 3.dp, vertical = 3.dp)
                     ) {
                         Image(
@@ -153,7 +150,7 @@ internal class AssetSelectorScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clickable(onClick = {
-                                navigator.pop()
+                                onNavigateUp?.invoke()
                             })
                     ) {
                         Text(text = directory, fontSize = 18.sp)

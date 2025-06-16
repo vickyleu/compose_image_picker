@@ -121,7 +121,7 @@ fun AssetImageItemPreview2() {
                     toasterState = null,
                     fontSize = 14.sp,
                     selected = true,
-                    maxFileSize = 10 * 1024 * 1024,
+                    maxFileSize = 30 * 1024 * 1024,
                     assetSelected = list
                 )
                 Spacer(modifier = Modifier.width(4.dp))

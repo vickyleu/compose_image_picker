@@ -1,10 +1,7 @@
 package com.huhx.app.data
 
-import kotlin.jvm.Synchronized
-
 object IdHelper {
-    private var id: Int = moments.size
+    private var id: Int = 0
 
-    @Synchronized
     fun nextID(): Int = id++
 }

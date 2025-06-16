@@ -8,8 +8,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
-import androidx.navigation.NavController
-import cafe.adriel.voyager.navigator.tab.TabNavigator
 import coil3.Uri
 import com.huhx.picker.AssetRoute
 import com.huhx.picker.formatDirectoryName
