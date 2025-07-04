@@ -31,6 +31,7 @@ fun AssetPicker(
     onPicked: (List<FileImpl>) -> Unit,
     onClose: (List<FileImpl>) -> Unit,
     onLoading: @Composable (() -> Unit)? = null,
+    enableBackHandler: Boolean = true,
 ) {
     val context = LocalPlatformContext.current
     val viewModel = remember {
@@ -61,9 +62,16 @@ fun AssetPicker(
                 AssetPickerRoute(
                     viewModel = viewModel,
                     toasterState = toasterState,
-                    onPicked = onPicked,
-                    onClose = onClose,
-                    assetPickerConfig = assetPickerConfig
+                    onPicked = { files ->
+                        println("🔍 AssetPicker.onPicked 被调用: 共${files.size}个文件")
+                        onPicked(files)
+                    },
+                    onClose = { files ->
+                        println("🔍 AssetPicker.onClose 被调用: 共${files.size}个文件")
+                        onClose(files)
+                    },
+                    assetPickerConfig = assetPickerConfig,
+                    enableBackHandler = enableBackHandler
                 )
             }
         }

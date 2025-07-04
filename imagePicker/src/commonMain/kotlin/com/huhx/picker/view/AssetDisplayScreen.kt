@@ -97,7 +97,6 @@ import org.jetbrains.compose.resources.painterResource
 
 
 internal class AssetDisplayScreen(
-    onClose: (List<AssetInfo>) -> Unit,
     toasterState: ToasterState? = null,
     onPicked: (List<AssetInfo>) -> Unit,
     viewModel: AssetViewModel,
@@ -107,7 +106,6 @@ internal class AssetDisplayScreen(
         viewModel,
         toasterState,
         onPicked,
-        onClose,
         assetPickerConfig
     )
 }) {
@@ -154,7 +152,7 @@ internal class AssetDisplayScreen(
             DisplayTopAppBar(
                 selectedList = viewModel.selectedList,
                 navigateUp = {
-                    model.onClose(it)
+                    println("🔍 AssetDisplayScreen.navigateUp: 只调用onNavigateUp，selectedList.size = ${it.size}")
                     onNavigateUp?.invoke()
                 }, 
                 onPicked = model.onPicked,
@@ -212,6 +210,7 @@ private fun Density.DisplayTopAppBar(
                     modifier = Modifier.size(48.dp)
                         .padding(8.dp)
                         .clickable {
+                            println("🔍 AssetDisplayScreen: 返回按钮被点击，selectedList.size = ${selectedList.size}")
                             navigateUp(selectedList)
                         }.padding(horizontal = 3.dp, vertical = 3.dp)
                 ) {
@@ -357,7 +356,7 @@ private fun AssetContent(
 
     // 需要将assets 排序,最后将所有list flatten 到一个list里面去
     val dtf = remember { DateTimeFormatterKMP.ofPattern("yyyy年MM月dd日 HH:mm:ss") }
-    val flattenedList = remember(assets) {
+    val flattenedList = remember(assets, requestType) {
         mutableListOf<Pair<String, AssetInfo>>().apply {
             if (requestType != RequestType.VIDEO) {
                 add("-" to AssetInfo.Camera)
@@ -398,9 +397,18 @@ private fun AssetContent(
         state = gridState,//viewModel.lazyState.value ?: rememberLazyGridState(),
         columns = GridCells.Fixed(3),
         content = {
-            itemsIndexed(flattenedList, key = { index, (time, assetInfo) ->
-                assetInfo.id
-            }) { index, (time, assetInfo) ->
+            itemsIndexed(
+                items = flattenedList, 
+                key = { index, (time, assetInfo) ->
+                    assetInfo.id
+                },
+                contentType = { index, (time, assetInfo) ->
+                    when (assetInfo) {
+                        is AssetInfo.Camera -> "camera"
+                        else -> "asset"
+                    }
+                }
+            ) { index, (time, assetInfo) ->
                 BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()

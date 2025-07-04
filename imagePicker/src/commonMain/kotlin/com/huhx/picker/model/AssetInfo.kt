@@ -1,11 +1,14 @@
+@file:OptIn(ExperimentalTime::class)
+
 package com.huhx.picker.model
 
 import coil3.PlatformContext
 import coil3.Uri
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.ExperimentalTime
 
 expect class MediaStoreKMP {
     object Files {

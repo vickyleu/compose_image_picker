@@ -91,14 +91,12 @@ fun AssetImageIndicator(
 
     with(LocalDensity.current){
         BoxWithConstraints ( modifier = Modifier
-            .padding(6.dp)
             .wrapContentHeight()
         ){
+            // 扩大的点击区域 (40.dp)，但视觉效果保持 20.dp
             Box(
                 modifier = Modifier
-                    .size(20.dp)
-                    .then(if (border == null) Modifier else Modifier.border(border, shape = CircleShape))
-                    .background(color = color, shape = CircleShape)
+                    .size(40.dp) // 扩大点击区域
                     .clickable {
                         val isSelected = !selected
                         if (onClicks != null) {
@@ -118,21 +116,29 @@ fun AssetImageIndicator(
                             if (isSelected) assetSelected.add(assetInfo) else assetSelected.remove(assetInfo)
                         }
                     }
-                    .clip(CircleShape)
-                ,
+                    .padding(10.dp), // 内部padding让视觉效果居中
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    modifier = Modifier.fillMaxSize(),
-                    textAlign = TextAlign.Center,
-                    text = if (selected)"${assetSelected.indexOf(assetInfo) + 1}" else "",
-                    color = Color.White,
-                    fontSize = fontSize,
-                    lineHeight = (fontSize.roundToPx()*1.5f).toDp().value.sp
-                )
+                // 视觉圆圈 (20.dp)
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .then(if (border == null) Modifier else Modifier.border(border, shape = CircleShape))
+                        .background(color = color, shape = CircleShape)
+                        .clip(CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        modifier = Modifier.fillMaxSize(),
+                        textAlign = TextAlign.Center,
+                        text = if (selected)"${assetSelected.indexOf(assetInfo) + 1}" else "",
+                        color = Color.White,
+                        fontSize = fontSize,
+                        lineHeight = (fontSize.roundToPx()*1.5f).toDp().value.sp
+                    )
+                }
             }
         }
-
     }
 }
 

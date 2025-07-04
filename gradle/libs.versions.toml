@@ -1,27 +1,28 @@
 [versions]
-agp = "8.10.1"
+agp = "8.11.0"
 
 android-minSdk = "24"
 android-compileSdk = "36"
+#noinspection OldTargetApi
 android-targetSdk = "33"
 
 constraintlayout = "2.2.1"
 #noinspection GradleDependency
-hazeMaterials = "1.6.4"
-kotlin = "2.1.21"
+hazeMaterials = "1.6.6"
+kotlin = "2.2.0"
 #noinspection GradleDependency
-compose-plugin = "1.8.1"
-jetpack-compose-bom = "2025.06.00"
+compose-plugin = "1.8.2"
+jetpack-compose-bom = "2025.06.01"
 coroutines-bom = "1.10.2"
 coil-bom = "3.2.0"
 jvmTarget = "17"
-androidx-lifecycle = "2.9.0"
+androidx-lifecycle = "2.9.1"
 dokka = "2.0.0"
 media3Exoplayer = "1.7.1"
 media3Ui = "1.7.1"
-androidx-navigation = "2.9.0-beta02"
-accompanist = "0.34.0"
-kotlinxDatetime = "0.6.2"
+androidx-navigation = "2.9.0-beta03"
+accompanist = "0.37.3"
+kotlinxDatetime = "0.7.0"
 
 [libraries]
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }

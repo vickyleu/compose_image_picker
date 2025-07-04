@@ -20,8 +20,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -99,7 +99,7 @@ fun MomentItem(moment: Moment) {
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-		Divider(thickness = 16.dp, color = Color.White)
+		HorizontalDivider(thickness = 16.dp, color = Color.White)
     }
 }
 

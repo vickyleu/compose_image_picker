@@ -10,6 +10,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.number
 import kotlinx.datetime.toNSDateComponents
 import platform.AVFoundation.AVURLAsset
 import platform.Foundation.NSCalendar
@@ -50,8 +51,8 @@ actual class DateTimeFormatterKMP(private val formatter: NSDateFormatter) {
         private fun LocalDateTime.toNSDateComponentsImpl(): NSDateComponents {
             val components = NSDateComponents()
             components.year = this.year.toLong()
-            components.month = this.monthNumber.toLong()
-            components.day = this.dayOfMonth.toLong()
+            components.month = this.month.number.toLong()
+            components.day = this.day.toLong()
             components.hour = this.hour.toLong()
             components.minute = this.minute.toLong()
             components.second = this.second.toLong()
@@ -97,10 +98,9 @@ actual class DateTimeFormatterKMP(private val formatter: NSDateFormatter) {
                     NSCalendarUnitSecond,
             date
         )
-        return LocalDateTime(
-            year = components.year.toInt(),
-            monthNumber = components.month.toInt(),
-            dayOfMonth = components.day.toInt(),
+        return LocalDateTime(year = components.year.toInt(),
+            month = components.month.toInt(),
+            day = components.day.toInt(),
             hour = components.hour.toInt(),
             minute = components.minute.toInt(),
             second = components.second.toInt()

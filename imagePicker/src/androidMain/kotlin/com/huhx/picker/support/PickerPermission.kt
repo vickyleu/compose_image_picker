@@ -33,7 +33,6 @@ import com.huhx.picker.util.LocalStoragePermission
 import com.huhx.picker.util.goToAppSetting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 
@@ -43,19 +42,37 @@ fun PickerPermissions(content: @Composable () -> Unit) {
     val context = LocalContext.current
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
     var permissionsGranted by rememberSaveable { mutableStateOf(false) }
-
-    var cameraSettingsIsLaunch by remember { mutableStateOf(false) }
-    var cameraIsLaunch by remember { mutableStateOf(false) }
+    var isCheckingPermission by remember { mutableStateOf(true) }
 
     val lifecycle = LocalLifecycleOwner.current
     val storagePermissionUtil = LocalStoragePermission.current?:throw IllegalStateException("LocalStoragePermission not found")
-    LaunchedEffect(permissionsGranted) {
+    
+    val scope = rememberCoroutineScope()
+
+    // 首次渲染时立即检查并申请权限
+    LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            println("PickerPermissions::LifecycleEventObserver::11111")
-            permissionsGranted = storagePermissionUtil.checkStoragePermission()
+            val hasPermission = storagePermissionUtil.checkStoragePermission()
+            permissionsGranted = hasPermission
+            
+            if (!hasPermission && !permissionRequested) {
+                // 立即申请权限，不显示"无权限!"界面
+                permissionRequested = true
+                storagePermissionUtil.requestStoragePermission(
+                    onGranted = {
+                        permissionsGranted = true
+                        isCheckingPermission = false
+                    }, 
+                    onDenied = {
+                        permissionsGranted = false
+                        isCheckingPermission = false
+                    }
+                )
+            } else {
+                isCheckingPermission = false
+            }
         }
     }
-    val scope = rememberCoroutineScope()
 
     val observer = remember {
         var lastEvent = Lifecycle.Event.ON_ANY
@@ -66,7 +83,7 @@ fun PickerPermissions(content: @Composable () -> Unit) {
             lastEvent = event
             println("PickerPermissions::LifecycleEventObserver::${event.name}")
             if (event == Lifecycle.Event.ON_RESUME) {
-                runBlocking {
+                scope.launch {
                     withContext(Dispatchers.IO) {
                         permissionsGranted = storagePermissionUtil.checkStoragePermission()
                         println("PickerPermissions::LifecycleEventObserver::permissionsGranted::${permissionsGranted}")
@@ -75,29 +92,53 @@ fun PickerPermissions(content: @Composable () -> Unit) {
             }
         }
     }
-    if (permissionsGranted) {
-        return content()
-    } else {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black),
-            contentAlignment = Alignment.Center
-        ) {
+
+    DisposableEffect(Unit) {
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.lifecycle.removeObserver(observer)
+        }
+    }
+
+    when {
+        permissionsGranted -> {
+            content()
+        }
+        isCheckingPermission -> {
+            // 显示加载状态，而不是"无权限!"
             Box(
                 modifier = Modifier
-                    .align(Alignment.Center)
-                    .wrapContentSize()
-                    .border(width = 1.dp, color = Color.White, RoundedCornerShape(5.dp))
-                    .clickable {
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                if (permissionRequested && permissionsGranted.not()) {
+                    .fillMaxSize()
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.CircularProgressIndicator(color = Color.White)
+            }
+        }
+        else -> {
+            // 只有在用户明确拒绝权限后才显示"无权限!"界面
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .wrapContentSize()
+                        .border(width = 1.dp, color = Color.White, RoundedCornerShape(5.dp))
+                        .clickable {
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                        isCheckingPermission = true
                                         storagePermissionUtil.requestStoragePermission(onGranted = {
                                             permissionsGranted = true
+                                            isCheckingPermission = false
                                         }, onDenied = {
                                             permissionsGranted = false
+                                            isCheckingPermission = false
                                         })
                                     } else {
                                         context.goToAppSetting()
@@ -105,37 +146,11 @@ fun PickerPermissions(content: @Composable () -> Unit) {
                                 }
                             }
                         }
-
-                    }
-                    .padding(horizontal = 15.dp, vertical = 10.dp)
-            ) {
-                Text(text = "无权限!", fontSize = 20.sp, color = Color.White)
-            }
-
-        }
-        if (permissionRequested.not()) {
-            LaunchedEffect(Unit) {
-                withContext(Dispatchers.IO) {
-                    storagePermissionUtil.checkStoragePermission().let {
-                        permissionsGranted = it
-
-                        if (it.not()) {
-                            permissionRequested = true
-                            storagePermissionUtil.requestStoragePermission(onGranted = {
-                                permissionsGranted = true
-                            }, onDenied = {
-                                permissionsGranted = false
-                            })
-                        }
-                    }
+                        .padding(horizontal = 15.dp, vertical = 10.dp)
+                ) {
+                    Text(text = "无权限!", fontSize = 20.sp, color = Color.White)
                 }
             }
-        }
-    }
-    DisposableEffect(Unit) {
-        lifecycle.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycle.lifecycle.removeObserver(observer)
         }
     }
 }

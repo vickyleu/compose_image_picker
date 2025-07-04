@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalTime::class)
+
 package com.huhx.picker.view
 
 import androidx.compose.animation.AnimatedVisibility
@@ -105,11 +107,12 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.ExperimentalTime
 
 
 internal class AssetPreviewScreen(

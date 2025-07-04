@@ -10,7 +10,6 @@ internal class AssetDisplayViewModel internal constructor(
     val viewModel: AssetViewModel,
     val toasterState: ToasterState?=null,
     val onPicked: (List<AssetInfo>) -> Unit,
-    val onClose: (List<AssetInfo>) -> Unit,
     val assetPickerConfig: AssetPickerConfig
 ) : BasicViewModel() {
 

@@ -39,15 +39,38 @@ import kotlinx.coroutines.withContext
 fun PickerPermissions(content: @Composable () -> Unit) {
     var permissionRequested by rememberSaveable { mutableStateOf(false) }
     var permissionsGranted by rememberSaveable { mutableStateOf(false) }
+    var isCheckingPermission by remember { mutableStateOf(true) }
+
     val lifecycle = LocalLifecycleOwner.current
     val storagePermissionUtil = LocalStoragePermission.current
         ?: throw IllegalStateException("LocalStoragePermission not found")
+
+    val scope = rememberCoroutineScope()
+
+    // 首次渲染时立即检查并申请权限
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.Default) {
-            permissionsGranted = storagePermissionUtil.checkStoragePermission()
+        withContext(Dispatchers.IO) {
+            val hasPermission = storagePermissionUtil.checkStoragePermission()
+            permissionsGranted = hasPermission
+
+            if (!hasPermission && !permissionRequested) {
+                // 立即申请权限，不显示"无权限!"界面
+                permissionRequested = true
+                storagePermissionUtil.requestStoragePermission(
+                    onGranted = {
+                        permissionsGranted = true
+                        isCheckingPermission = false
+                    },
+                    onDenied = {
+                        permissionsGranted = false
+                        isCheckingPermission = false
+                    }
+                )
+            } else {
+                isCheckingPermission = false
+            }
         }
     }
-    val scope = rememberCoroutineScope()
 
     val observer = remember {
         var lastEvent = Lifecycle.Event.ON_ANY
@@ -65,60 +88,57 @@ fun PickerPermissions(content: @Composable () -> Unit) {
             }
         }
     }
-    if (permissionsGranted) {
-        return content()
-    } else {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black),
-            contentAlignment = Alignment.Center
-        ) {
-            val context = LocalPlatformContext.current
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .wrapContentSize()
-                    .border(width = 1.dp, color = Color.White, RoundedCornerShape(5.dp))
-                    .clickable {
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                if (permissionRequested && permissionsGranted.not()) {
-                                    context.goToAppSetting()
-                                }
-                            }
-                        }
 
-                    }
-                    .padding(horizontal = 15.dp, vertical = 10.dp)
-            ) {
-                Text(text = "无权限!", fontSize = 20.sp, color = Color.White)
-            }
-
-        }
-        if (permissionRequested.not()) {
-            LaunchedEffect(Unit) {
-                withContext(Dispatchers.IO) {
-                    storagePermissionUtil.checkStoragePermission().let {
-                        permissionsGranted = it
-
-                        if (it.not()) {
-                            permissionRequested = true
-                            storagePermissionUtil.requestStoragePermission(onGranted = {
-                                permissionsGranted = true
-                            }, onDenied = {
-                                permissionsGranted = false
-                            })
-                        }
-                    }
-                }
-            }
-        }
-    }
     DisposableEffect(Unit) {
         lifecycle.lifecycle.addObserver(observer)
         onDispose {
             lifecycle.lifecycle.removeObserver(observer)
+        }
+    }
+
+    when {
+        permissionsGranted -> {
+            content()
+        }
+
+        isCheckingPermission -> {
+            // 显示加载状态，而不是"无权限!"
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.CircularProgressIndicator(color = Color.White)
+            }
+        }
+
+        else -> {
+            // 只有在用户明确拒绝权限后才显示"无权限!"界面
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                val context = LocalPlatformContext.current
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .wrapContentSize()
+                        .border(width = 1.dp, color = Color.White, RoundedCornerShape(5.dp))
+                        .clickable {
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    context.goToAppSetting()
+                                }
+                            }
+                        }
+                        .padding(horizontal = 15.dp, vertical = 10.dp)
+                ) {
+                    Text(text = "无权限!", fontSize = 20.sp, color = Color.White)
+                }
+            }
         }
     }
 }

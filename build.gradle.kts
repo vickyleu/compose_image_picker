@@ -31,14 +31,18 @@ import java.util.Properties
 import java.util.concurrent.Executors
 
 plugins {
+
+    id("maven-publish")
+    alias(libs.plugins.dokka)
+
     alias(libs.plugins.android.application).apply(false)
     alias(libs.plugins.android.library).apply(false)
     alias(libs.plugins.kotlin.multiplatform).apply(false)
     alias(libs.plugins.kotlin.parcelize).apply(false)
     alias(libs.plugins.jetbrains.compose).apply(false)
     alias(libs.plugins.compose.compiler).apply(false)
-    alias(libs.plugins.dokka)
-    id("maven-publish")
+
+
 
 //    id(libs.plugins.android.application.get().pluginId).apply(false)
 //    id(libs.plugins.android.library.get().pluginId).apply(false)
