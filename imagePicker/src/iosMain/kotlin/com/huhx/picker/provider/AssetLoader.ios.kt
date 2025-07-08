@@ -1,11 +1,15 @@
 package com.huhx.picker.provider
 
+import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.Uri
+import coil3.fetch.FetchResult
+import coil3.request.Options
 import coil3.toUri
 import com.huhx.picker.model.AssetInfo
 import com.huhx.picker.model.MediaStoreKMP
 import com.huhx.picker.model.RequestType
+import com.huhx.picker.view.PHAssetFetcher
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -412,4 +416,41 @@ internal fun String.toPHAsset(): PHAsset? {
 internal fun String.toPHAssetFetch(): PHFetchResult{
     val fetchResult = PHAsset.fetchAssetsWithLocalIdentifiers(listOf(NSString.create(string = this)), null)
     return fetchResult
+}
+
+
+
+actual class PHAssetFetcherBridge {
+
+    actual suspend fun fetchFromPhotoLibrary(
+        uri: Uri,
+        fileName: String,
+        options: Options,
+        imageLoader: ImageLoader
+    ): FetchResult {
+        return try {
+            val phassetFetcher = PHAssetFetcher(uri,options, imageLoader)
+
+            // 调用suspend fetch方法
+            val fetchResult = phassetFetcher.fetch()
+
+            // 返回fetch结果
+            fetchResult
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to fetch from photo library: $uri", e)
+        }
+    }
+}
+private fun getMimeTypeFromFileName(fileName: String): String {
+    val extension = fileName.substringAfterLast('.', "").lowercase()
+    return when (extension) {
+        "jpg", "jpeg" -> "image/jpeg"
+        "png" -> "image/png"
+        "gif" -> "image/gif"
+        "webp" -> "image/webp"
+        "bmp" -> "image/bmp"
+        "heic" -> "image/heic"
+        "heif" -> "image/heif"
+        else -> "image/jpeg" // 默认为jpeg
+    }
 }

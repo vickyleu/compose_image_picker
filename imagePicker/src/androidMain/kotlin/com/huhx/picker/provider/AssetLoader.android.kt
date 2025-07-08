@@ -7,8 +7,11 @@ import android.database.Cursor
 import android.database.MatrixCursor
 import android.provider.MediaStore
 import androidx.core.database.getStringOrNull
+import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.Uri
+import coil3.fetch.FetchResult
+import coil3.request.Options
 import coil3.toAndroidUri
 import coil3.toCoilUri
 import com.huhx.picker.model.AssetInfo
@@ -17,10 +20,10 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
- actual abstract class AssetLoader {
+actual abstract class AssetLoader {
 
     actual companion object {
-        actual suspend  fun insertImage(context: PlatformContext): Uri? {
+        actual suspend fun insertImage(context: PlatformContext): Uri? {
             val contentValues = ContentValues().apply {
                 put(
                     MediaStore.Images.Media.DISPLAY_NAME,
@@ -34,11 +37,11 @@ import kotlinx.coroutines.withContext
             )?.toCoilUri()
         }
 
-        actual suspend  fun deleteByUri(context: PlatformContext, uri: Uri) {
+        actual suspend fun deleteByUri(context: PlatformContext, uri: Uri) {
             context.contentResolver.delete(uri.toAndroidUri(), null, null)
         }
 
-        actual suspend  fun findByUri(context: PlatformContext, uri: Uri): AssetInfo? {
+        actual suspend fun findByUri(context: PlatformContext, uri: Uri): AssetInfo? {
             val cursor =
                 context.contentResolver.query(
                     uri.toAndroidUri(),
@@ -86,11 +89,15 @@ import kotlinx.coroutines.withContext
             return null
         }
 
-        actual suspend  fun load(context: PlatformContext, requestType: RequestType,onlyLast:Boolean): List<AssetInfo> {
+        actual suspend fun load(
+            context: PlatformContext,
+            requestType: RequestType,
+            onlyLast: Boolean
+        ): List<AssetInfo> {
             val assets = mutableListOf<AssetInfo>()
-            val cursor = createCursor(context, requestType,onlyLast)
+            val cursor = createCursor(context, requestType, onlyLast)
             val completer = CompletableDeferred<MutableList<AssetInfo>>()
-            withContext(Dispatchers.IO){
+            withContext(Dispatchers.IO) {
                 cursor?.use {
                     val indexId = it.getColumnIndex(projection[0])
                     val indexFilename = it.getColumnIndex(projection[1])
@@ -128,7 +135,7 @@ import kotlinx.coroutines.withContext
                                 mimeType = it.getString(indexMimeType),
                                 size = it.getLong(indexSize),
                                 duration = it.getLong(indexDuration),
-                                directory = it.getStringOrNull(indexDirectory)?:"",
+                                directory = it.getStringOrNull(indexDirectory) ?: "",
                             )
                         )
                     }
@@ -139,7 +146,11 @@ import kotlinx.coroutines.withContext
             return assets
         }
 
-        private fun createCursor(context: PlatformContext, requestType: RequestType,onlyLast:Boolean): Cursor? {
+        private fun createCursor(
+            context: PlatformContext,
+            requestType: RequestType,
+            onlyLast: Boolean
+        ): Cursor? {
             val mediaType = MediaStore.Files.FileColumns.MEDIA_TYPE
             val image = MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
             val video = MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
@@ -160,10 +171,14 @@ import kotlinx.coroutines.withContext
                     arguments = listOf(video.toString())
                 )
             }
-            return createMediaCursor(context, selection,onlyLast)
+            return createMediaCursor(context, selection, onlyLast)
         }
 
-        private fun createMediaCursor(context: Context, selection: Selection, onlyLast: Boolean): Cursor? {
+        private fun createMediaCursor(
+            context: Context,
+            selection: Selection,
+            onlyLast: Boolean
+        ): Cursor? {
             val cursor = context.contentResolver.query(
                 /* uri = */ MediaStore.Files.getContentUri("external"),
                 /* projection = */ projection,
@@ -175,7 +190,8 @@ import kotlinx.coroutines.withContext
                 // 如果只需要最新的一条记录
                 MatrixCursor(cursor.columnNames).apply {
                     if (cursor.moveToFirst()) {
-                        addRow((0 until cursor.columnCount).map { cursor.getString(it) }.toTypedArray())
+                        addRow((0 until cursor.columnCount).map { cursor.getString(it) }
+                            .toTypedArray())
                     }
                 }
             } else {
@@ -206,8 +222,19 @@ import kotlinx.coroutines.withContext
             MediaStore.Video.Media.BUCKET_DISPLAY_NAME,
             MediaStore.Files.FileColumns.DATA,
         )
-
     }
+}
 
 
+actual class PHAssetFetcherBridge {
+    actual suspend fun fetchFromPhotoLibrary(
+        uri: Uri,
+        fileName: String,
+        options: Options,
+        imageLoader: ImageLoader
+    ): FetchResult {
+        // 这里需要实现从iOS照片库获取PHAsset的逻辑
+        // 由于iOS平台特定的实现，这里需要使用平台特定的API来获取PHAsset
+        throw NotImplementedError("This method should be implemented for iOS platform")
+    }
 }

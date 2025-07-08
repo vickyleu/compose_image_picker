@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -329,6 +330,36 @@ private fun AssetContent(
             scope.launch { viewModel.deleteImage(this@rememberCameraLauncher.uri) }
         }
     }
+    
+    // 显示保存进度指示器覆盖层
+    if (cameraLauncher.isSaving) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.8f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(50.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "正在保存图片... ${cameraLauncher.savingProgress}%",
+                        color = Color.White,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+        }
+    }
 
 
     LaunchedEffect(Unit) {
@@ -577,6 +608,8 @@ expect class CameraLauncher {
     fun launch(context: PlatformContext, uri: Uri?)
     fun fetchCameraUri(assets: Map<String, List<AssetInfo>>): AssetInfo?
     val uri: Uri?
+    val isSaving: Boolean
+    val savingProgress: Int
 }
 
 @Composable

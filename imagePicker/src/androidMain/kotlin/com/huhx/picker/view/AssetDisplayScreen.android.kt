@@ -27,6 +27,13 @@ actual class CameraLauncher(
     private val scope: CoroutineScope
 ) {
     private var cameraUri: Uri? by mutableStateOf(null)
+    
+    // 在Android上，保存通常很快，所以提供简单的状态管理
+    private val _isSaving = mutableStateOf(false)
+    actual val isSaving: Boolean get() = _isSaving.value
+    
+    private val _savingProgress = mutableStateOf(0)
+    actual val savingProgress: Int get() = _savingProgress.value
 
     actual fun fetchCameraUri(assets: Map<String, List<AssetInfo>>): AssetInfo? {
         var assetInfo: AssetInfo? = null

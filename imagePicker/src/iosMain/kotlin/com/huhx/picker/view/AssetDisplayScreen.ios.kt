@@ -30,6 +30,10 @@ actual class CameraLauncher(
 
     actual val uri: Uri?
         get() = assetInfo?.uriString?.toUri()
+        
+    // 暴露保存状态
+    actual val isSaving: Boolean get() = cameraController.isSaving
+    actual val savingProgress: Int get() = cameraController.savingProgress
 
     actual fun fetchCameraUri(assets: Map<String, List<AssetInfo>>): AssetInfo? {
         var assetInfo: AssetInfo? = null
@@ -40,7 +44,7 @@ actual class CameraLauncher(
                     if (it.uriString == ass.uriString) {
                         assetInfo = it
                         this.assetInfo = null
-                        return it
+                        return assetInfo
                     }
                 }
             }

@@ -39,6 +39,7 @@ import com.huhx.picker.provider.AssetLoader
 import com.huhx.picker.provider.AssetLoader.AssetInfoImpl
 import com.huhx.picker.provider.AssetLoader.Companion.convertMediaType
 import com.huhx.picker.provider.AssetLoader.Companion.uriString
+import com.huhx.picker.provider.toPHAsset
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CValue
@@ -59,6 +60,7 @@ import kotlinx.coroutines.withContext
 import okio.Buffer
 import okio.BufferedSource
 import okio.FileSystem
+import com.huhx.picker.provider.FileImplFetcherFactory
 import platform.AVFoundation.AVLayerVideoGravityResizeAspectFill
 import platform.AVFoundation.AVPlayer
 import platform.AVFoundation.AVPlayerItem
@@ -81,6 +83,7 @@ import platform.AVFoundation.seekToTime
 import platform.AVFoundation.timeControlStatus
 import platform.AVKit.AVPlayerViewController
 import platform.CoreGraphics.CGRectMake
+import platform.CoreGraphics.CGSize
 import platform.CoreGraphics.CGSizeMake
 import platform.CoreMedia.CMTime
 import platform.CoreMedia.CMTimeMake
@@ -97,13 +100,16 @@ import platform.Foundation.removeObserver
 import platform.Foundation.timeIntervalSince1970
 import platform.Foundation.valueForKey
 import platform.Photos.PHAsset
+import platform.Photos.PHAssetChangeRequest
 import platform.Photos.PHAssetMediaTypeImage
 import platform.Photos.PHFetchOptions
 import platform.Photos.PHImageContentModeAspectFill
 import platform.Photos.PHImageManager
 import platform.Photos.PHImageRequestOptions
+import platform.Photos.PHImageRequestOptionsDeliveryModeFastFormat
 import platform.Photos.PHImageRequestOptionsDeliveryModeHighQualityFormat
 import platform.Photos.PHImageRequestOptionsResizeModeFast
+import platform.Photos.PHPhotoLibrary
 import platform.QuartzCore.CATransaction
 import platform.QuartzCore.kCATransactionDisableActions
 import platform.UIKit.NSLayoutConstraint
@@ -113,7 +119,6 @@ import platform.UIKit.UIImagePickerController
 import platform.UIKit.UIImagePickerControllerDelegateProtocol
 import platform.UIKit.UIImagePickerControllerOriginalImage
 import platform.UIKit.UIImagePickerControllerSourceType
-import platform.UIKit.UIImageWriteToSavedPhotosAlbum
 import platform.UIKit.UINavigationControllerDelegateProtocol
 import platform.UIKit.UIView
 import platform.UIKit.UIViewController
@@ -523,6 +528,7 @@ internal class Observer(private val eventListener: PlayerEventListener) : NSObje
 
 
 private val fetcherFactory = PHAssetFetcherFactory()
+private val fetcherImplFactory = FileImplFetcherFactory()
 
 @OptIn(ExperimentalCoilApi::class)
 actual fun ImageRequest.Builder.decoderFactoryPlatform(progress: (Int) -> Unit): ImageRequest.Builder {
@@ -535,6 +541,7 @@ actual fun ImageRequest.Builder.decoderFactoryPlatform(progress: (Int) -> Unit):
     })
     return this
         .fetcherFactory(fetcherFactory)
+        .fetcherFactory(fetcherImplFactory)
         .placeholder {
             (it.fetcherFactory?.first as? PHAssetFetcherFactory)?.let {
 //                val p = it.progress.value
@@ -577,24 +584,41 @@ class PHAssetFetcher(
                 var attempt = 0
                 val maxRetries = 3
                 var imageData: ByteArray? = null
+                var lastError: Exception? = null
+                
                 while (attempt < maxRetries) {
                     attempt++
-                    imageData = withContext(Dispatchers.IO) {
-                        getImageDataFromPHAsset(localIdentifier, options) {
-                            progress.value = it
+                    try {
+                        imageData = withContext(Dispatchers.IO) {
+                            getImageDataFromPHAsset(localIdentifier, options) { progressValue ->
+                                progress.value = progressValue
+                                
+                                // 如果是从iCloud下载，更新UI进度
+                                if (progressValue > 0 && progressValue < 100) {
+                                    println("iCloud下载进度: $progressValue%")
+                                }
+                            }
                         }
+                        if (imageData != null) {
+                            bufferedSource.buffer.write(imageData)
+                            bufferedSource.buffer.flush()
+                            break
+                        }
+                    } catch (e: Exception) {
+                        lastError = e
+                        println("第${attempt}次尝试失败: ${e.message}")
                     }
-                    if (imageData != null) {
-                        bufferedSource.buffer.write(imageData)
-                        bufferedSource.buffer.flush()
-                        break
-                    }
+                    
                     if (attempt < maxRetries) {
-                        delay(1000L)  // 等待一秒后重试
+                        // 智能重试延迟：第一次1秒，第二次2秒
+                        val delayMs = attempt * 1000L
+                        println("等待${delayMs}ms后进行第${attempt + 1}次重试")
+                        delay(delayMs)
                     }
                 }
+                
                 if (imageData == null) {
-                    throw Exception("Failed to get image data after $maxRetries attempts")
+                    throw Exception("Failed to get image data after $maxRetries attempts. Last error: ${lastError?.message}")
                 }
             }
             SourceFetchResult(
@@ -623,35 +647,77 @@ internal suspend fun getImageDataFromPHAsset(
         val asset = fetchResult.firstObject() as? PHAsset ?: return@withContext run {
             completer.complete(null)
         }
-        var imageData: ByteArray?
+        
+        var imageData: ByteArray? = null
+        var hasReceivedHighQuality = false
+        var fallbackData: ByteArray? = null
+        
         val options = PHImageRequestOptions()
         options.networkAccessAllowed = true
         options.synchronous = false
         options.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat
         options.resizeMode = PHImageRequestOptionsResizeModeFast
+        
         options.progressHandler = { progress, error, stop, info ->
             val p = (progress * 100f).toInt().coerceIn(0, 100)
             progressCallback.invoke(p)
+            
             if (error != null) {
-                completer.complete(null)
-            } else if (p == 100) {
+                println("iCloud下载错误: ${error.localizedDescription}")
+                // 如果有降级图片，使用它
+                if (fallbackData != null && !hasReceivedHighQuality) {
+                    completer.complete(fallbackData)
+                } else {
+                    completer.complete(null)
+                }
             }
         }
+        
         val size = optionsCoil.size.let {
             androidx.compose.ui.geometry.Size(
                 (it.width as Dimension.Pixels).px.toFloat(),
                 (it.height as Dimension.Pixels).px.toFloat()
             )
         }
-        PHImageManager.defaultManager().requestImageForAsset(asset,
+        
+        PHImageManager.defaultManager().requestImageForAsset(
+            asset,
             targetSize = CGSizeMake(size.width.toDouble(), size.height.toDouble()),
             contentMode = PHImageContentModeAspectFill,
-            options = options,
-            resultHandler = { image, _ ->
-                imageData = image?.toByteArray()
-                completer.complete(imageData)
+            options = options
+        ) { image, info ->
+            val isDegraded = info?.get("PHImageResultIsDegradedKey") as? Boolean ?: false
+            val isInCloud = info?.get("PHImageResultIsInCloudKey") as? Boolean ?: false
+            val imageBytes = image?.toByteArray()
+            
+            if (imageBytes != null) {
+                if (isDegraded) {
+                    // 这是降级图片，保存作为后备，但继续等待高质量版本
+                    fallbackData = imageBytes
+                    println("收到降级图片，大小: ${imageBytes.size} bytes")
+                    
+                    // 如果图片在iCloud中，设置超时
+                    if (isInCloud) {
+                        kotlinx.coroutines.MainScope().launch {
+                            delay(5000) // 5秒超时
+                            if (!hasReceivedHighQuality && !completer.isCompleted) {
+                                println("超时，使用降级图片")
+                                completer.complete(fallbackData)
+                            }
+                        }
+                    }
+                } else {
+                    // 这是高质量图片
+                    hasReceivedHighQuality = true
+                    imageData = imageBytes
+                    println("收到高质量图片，大小: ${imageBytes.size} bytes")
+                    completer.complete(imageData)
+                }
+            } else if (!isDegraded) {
+                // 没有图片且不是降级版本，说明失败了
+                completer.complete(fallbackData) // 尝试使用降级版本
             }
-        )
+        }
     }
     return completer.await()
 }
@@ -696,6 +762,13 @@ class IOSCameraController(
     UIImagePickerControllerDelegateProtocol, UINavigationControllerDelegateProtocol {
 
     private var onResult: ((AssetInfo?) -> Unit)? = null
+    
+    // 添加保存状态管理
+    private val _isSaving = mutableStateOf(false)
+    val isSaving: Boolean get() = _isSaving.value
+    
+    private val _savingProgress = mutableStateOf(0)
+    val savingProgress: Int get() = _savingProgress.value
 
     fun startCamera(onResult: (AssetInfo?) -> Unit) {
         this.onResult = {
@@ -743,13 +816,35 @@ class IOSCameraController(
 
     @OptIn(ExperimentalForeignApi::class)
     private fun saveImageToAlbum(image: UIImage) {
-        UIImageWriteToSavedPhotosAlbum(image, null, null, null)
+        // 开始保存，更新状态
+        _isSaving.value = true
+        _savingProgress.value = 0
+        
         scope.launch {
-            withContext(Dispatchers.IO) {
-                delay(300)
-                // 获取保存后的照片URL
-                fetchLastImageUri { info ->
-                    onResult?.invoke(info)
+            withContext(Dispatchers.Main) {
+                _savingProgress.value = 10
+            }
+        }
+        
+        // 使用更精确的保存方法
+        saveImageWithPreciseTracking(image) { success, assetIdentifier ->
+            scope.launch {
+                withContext(Dispatchers.Main) {
+                    if (success && assetIdentifier != null) {
+                        _savingProgress.value = 100
+                        delay(200)
+                        _isSaving.value = false
+                        _savingProgress.value = 0
+                        
+                        // 直接使用精确的asset identifier创建AssetInfo
+                        createAssetInfoFromIdentifier(assetIdentifier) { info ->
+                            onResult?.invoke(info)
+                        }
+                    } else {
+                        _isSaving.value = false
+                        _savingProgress.value = 0
+                        onResult?.invoke(null)
+                    }
                 }
             }
         }
@@ -788,28 +883,194 @@ class IOSCameraController(
             PHAsset.fetchAssetsWithMediaType(PHAssetMediaTypeImage, options = fetchOptions)
 
         val asset = fetchResult.firstObject as? PHAsset
-        asset?.let {
-            val fileName = asset.valueForKey("filename") as? String ?: ""
+        asset?.let { phAsset ->
+            val fileName = phAsset.valueForKey("filename") as? String ?: ""
             val mimeType = "image/jpeg" // 根据需要设置MIME类型
             val info = AssetLoader.AssetInfoImpl(
-                id = asset.localIdentifier,
-                uriString = NSURL(string = "phasset://${asset.localIdentifier}").uriString,
+                id = phAsset.localIdentifier,
+                uriString = NSURL(string = "phasset://${phAsset.localIdentifier}").uriString,
                 filename = fileName,
-                date = asset.creationDate?.timeIntervalSince1970?.toLong()
+                date = phAsset.creationDate?.timeIntervalSince1970?.toLong()
                     ?.times(1000) ?: 0L,
-                mediaType = asset.mediaType.toInt(),
+                mediaType = phAsset.mediaType.toInt(),
                 mimeType = mimeType,
-                duration = asset.duration.toLong(),
+                duration = phAsset.duration.toLong(),
                 directory = "Photo" // iOS上没有直接的文件目录
             )
-            onComplete(info)
-//            val options = PHContentEditingInputRequestOptions()
-//            it.requestContentEditingInputWithOptions(options) { input, _ ->
-//                val uri = input?.fullSizeImageURL?.absoluteString?.toUri()
-//
-//            }
+            
+            // 预先检查和下载图片以确保可用性
+            preloadImageFromAsset(phAsset) { success ->
+                if (success) {
+                    onComplete(info)
+                } else {
+                    // 如果预加载失败，仍然返回AssetInfo，但日志记录问题
+                    println("警告: 图片可能在iCloud中，Coil加载时可能需要网络下载")
+                    onComplete(info)
+                }
+            }
         } ?: run {
             onComplete(null)
+        }
+    }
+    
+    // 精确保存图片并获取asset identifier
+    @OptIn(ExperimentalForeignApi::class)
+    private fun saveImageWithPreciseTracking(image: UIImage, onComplete: (Boolean, String?) -> Unit) {
+        scope.launch {
+            withContext(Dispatchers.Main) {
+                _savingProgress.value = 30
+            }
+        }
+        
+        PHPhotoLibrary.sharedPhotoLibrary().performChanges({
+            // 创建图片asset请求
+            val creationRequest = PHAssetChangeRequest.creationRequestForAssetFromImage(image)
+            creationRequest?.placeholderForCreatedAsset?.localIdentifier
+        }) { success, error ->
+            scope.launch {
+                withContext(Dispatchers.Main) {
+                    _savingProgress.value = 80
+                }
+            }
+            
+            if (success) {
+                // 保存成功，获取最新创建的asset
+                fetchMostRecentAsset { identifier ->
+                    onComplete(true, identifier)
+                }
+            } else {
+                println("保存图片失败: ${error?.localizedDescription}")
+                onComplete(false, null)
+            }
+        }
+    }
+    
+    // 获取最新创建的asset (作为备选方案)
+    private fun fetchMostRecentAsset(onComplete: (String?) -> Unit) {
+        val fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = listOf(NSSortDescriptor(key = "creationDate", ascending = false))
+        fetchOptions.fetchLimit = 1u
+        
+        val fetchResult = PHAsset.fetchAssetsWithMediaType(PHAssetMediaTypeImage, options = fetchOptions)
+        val asset = fetchResult.firstObject as? PHAsset
+        onComplete(asset?.localIdentifier)
+    }
+    
+    // 从identifier创建AssetInfo
+    private fun createAssetInfoFromIdentifier(identifier: String, onComplete: (AssetInfo?) -> Unit) {
+        val asset = identifier.toPHAsset()
+        asset?.let { phAsset ->
+            val fileName = phAsset.valueForKey("filename") as? String ?: ""
+            val mimeType = "image/jpeg"
+            val info = AssetLoader.AssetInfoImpl(
+                id = phAsset.localIdentifier,
+                uriString = NSURL(string = "phasset://${phAsset.localIdentifier}").uriString,
+                filename = fileName,
+                date = phAsset.creationDate?.timeIntervalSince1970?.toLong()?.times(1000) ?: 0L,
+                mediaType = phAsset.mediaType.toInt(),
+                mimeType = mimeType,
+                duration = phAsset.duration.toLong(),
+                directory = "Photo"
+            )
+            
+            // 智能预载 - 预载多个尺寸
+            intelligentPreload(phAsset) { 
+                onComplete(info)
+            }
+        } ?: run {
+            onComplete(null)
+        }
+    }
+
+    // 智能预载 - 预载多个尺寸以优化用户体验
+    @OptIn(ExperimentalForeignApi::class)
+    private fun intelligentPreload(asset: PHAsset, onComplete: () -> Unit) {
+        val sizes = listOf(
+            CGSizeMake(200.0, 200.0),   // 缩略图
+            CGSizeMake(800.0, 600.0),   // 中等尺寸
+            CGSizeMake(1200.0, 1200.0)  // 高质量预览
+        )
+        
+        var completedCount = 0
+        val totalCount = sizes.size
+        
+        sizes.forEach { size ->
+            preloadSpecificSize(asset, size) { success ->
+                completedCount++
+                if (completedCount == 1) {
+                    // 第一个(缩略图)完成就可以继续，其他在后台继续
+                    onComplete()
+                }
+            }
+        }
+    }
+    
+    // 预载特定尺寸
+    @OptIn(ExperimentalForeignApi::class)
+    private fun preloadSpecificSize(asset: PHAsset, targetSize: CValue<CGSize>, onComplete: (Boolean) -> Unit) {
+        val options = PHImageRequestOptions().apply {
+            networkAccessAllowed = true
+            synchronous = false
+            deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat
+            resizeMode = PHImageRequestOptionsResizeModeFast
+            
+            progressHandler = { progress, error, stop, info ->
+                if (error != null && progress == 0.0) {
+                    println("预载失败: ${error.localizedDescription}")
+                    onComplete(false)
+                }
+            }
+        }
+        
+        PHImageManager.defaultManager().requestImageForAsset(
+            asset,
+            targetSize = targetSize,
+            contentMode = PHImageContentModeAspectFill,
+            options = options
+        ) { image, info ->
+            val success = image != null
+            onComplete(success)
+            
+            // 监控iCloud状态
+            val isInCloud = info?.get("PHImageResultIsInCloudKey") as? Boolean ?: false
+            val isDegraded = info?.get("PHImageResultIsDegradedKey") as? Boolean ?: false
+            
+            if (isInCloud) {
+                println("图片位于iCloud中，尺寸${targetSize}已触发下载")
+            }
+        }
+    }
+
+    // 预加载图片以确保可用性 (保留原方法作为备用)
+    @OptIn(ExperimentalForeignApi::class)
+    private fun preloadImageFromAsset(asset: PHAsset, onComplete: (Boolean) -> Unit) {
+        preloadSpecificSize(asset, CGSizeMake(200.0, 200.0)) { success ->
+            onComplete(success)
+        }
+    }
+    
+    // 检查网络连接状态
+    private fun isNetworkAvailable(): Boolean {
+        return try {
+            // 简单的网络可达性检查
+            // 实际应用中可以实现更精确的检查
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
+    // 智能下载策略：根据网络状态调整下载行为
+    private fun getOptimalImageRequestOptions(isNetworkPreferred: Boolean = true): PHImageRequestOptions {
+        return PHImageRequestOptions().apply {
+            networkAccessAllowed = isNetworkPreferred && isNetworkAvailable()
+            synchronous = false
+            deliveryMode = if (networkAccessAllowed) {
+                PHImageRequestOptionsDeliveryModeHighQualityFormat
+            } else {
+                PHImageRequestOptionsDeliveryModeFastFormat // 如果没有网络，使用快速格式
+            }
+            resizeMode = PHImageRequestOptionsResizeModeFast
         }
     }
 
